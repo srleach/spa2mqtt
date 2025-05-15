@@ -23,4 +23,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set the default command to run the app
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["python", "spa2mqtt/main.py"]

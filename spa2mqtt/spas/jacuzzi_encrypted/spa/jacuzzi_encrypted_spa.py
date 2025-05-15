@@ -1,0 +1,43 @@
+from datetime import datetime
+
+from spa2mqtt.spas.base.spa import Spa
+from spa2mqtt.spas.jacuzzi_encrypted.packet import JacuzziEncryptedPacket
+from spa2mqtt.spas.jacuzzi_encrypted.packet_types import JacuzziEncryptedPacketType
+
+
+class JacuzziEncryptedSpa(Spa):
+    def process_update(self, timestamp: datetime, message: bytes):
+        """
+        We're doing a callback back into the Jacuzzi responsibility here to keep the decoding within the domain of the
+        variant. The intention is that for additional spa variants we can expose additional config types that can reuse
+        the bulk of the communications logic and simply hand off tub specific logic where required.
+        :param timestamp:
+        :param message:
+        :return:
+        """
+        # print(f"Message from {self.model_name} at {timestamp.time().isoformat()}: Len {len(message)}")
+
+        pkt = JacuzziEncryptedPacket(message)
+
+        match pkt.as_enum():
+            case JacuzziEncryptedPacketType.STATUS_UPDATE | JacuzziEncryptedPacketType.STATUS_UPDATE_ALT_16:
+                print(pkt)
+                pass
+            case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
+                pass
+            case JacuzziEncryptedPacketType.LIGHTS_UPDATE | JacuzziEncryptedPacketType.LIGHTS_UPDATE_ALT_23:
+                pass
+            case JacuzziEncryptedPacketType.CLEAR_TO_SEND:
+                pass
+            case JacuzziEncryptedPacketType.CC_REQ | JacuzziEncryptedPacketType.CC_REQ_ALT_17:
+                pass
+            case _:
+                print("Spa emitted an unrecognised message")
+                print(pkt)
+
+        # Here's the place to deviate behaviour if we want to selectively process certain packet types. I suppose
+        # We should think about implementing a channelising mechansim.
+        # print(pkt)
+        # <Packet STATUS_UPDATE ch=0x0a mid=0xbf type=0xc4 payload=...>
+
+        return True

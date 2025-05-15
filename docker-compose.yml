@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  Jacuzzi2MQTT:
+    build: .
+    container_name: Jacuzzi2MQTT
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python main.py
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

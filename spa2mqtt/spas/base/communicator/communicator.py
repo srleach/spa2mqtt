@@ -18,6 +18,7 @@ class Communicator:
     # Persist our callbacks
     spa_process_update_cb: Callable[[datetime.datetime, bytes], bool]
 
+    # We can probably define this in our config to come.
     packet_marker = 0x7e
 
     def __init__(self, spa_address, spa_port, logger: logging.Logger = logging.getLogger(__name__)):
@@ -27,6 +28,12 @@ class Communicator:
         self.logger.info(f"Instantiated default communicator with target {spa_address}:{spa_port}")
 
     def process_update(self, bytes):
+        """
+        We've received a packet from the spa. Handle it.
+
+        :param bytes:
+        :return:
+        """
         self.logger.debug(f"Processing message {bytes}")
         return self.spa_process_update_cb(datetime.datetime.now(), bytes)
 
@@ -50,6 +57,12 @@ class Communicator:
             return False
 
     async def attach_update_handler(self, spa_process_update_cb: Callable[[datetime.datetime, bytes], bool]):
+        """
+        Attach a callable update handler to the spa.
+
+        :param spa_process_update_cb:
+        :return:
+        """
         self.logger.info("Attaching update handler.")
         self.spa_process_update_cb = spa_process_update_cb
 
@@ -75,6 +88,13 @@ class Communicator:
             prev = current
 
     async def _read_exactly(self, n: int, timeout: float = 5.0) -> bytes:
+        """
+        Read exactly `n` bytes from the spa.
+
+        :param n:
+        :param timeout:
+        :return:
+        """
         buffer = bytearray()
         while len(buffer) < n:
             try:

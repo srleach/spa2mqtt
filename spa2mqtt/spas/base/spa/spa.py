@@ -19,8 +19,6 @@ class Spa:
         :param message:
         :return:
         """
-        # print(f"Message from {self.model_name} at {timestamp.time().isoformat()}: Len {len(message)}")
-
         pkt = Packet(message)
 
         match pkt.as_enum():

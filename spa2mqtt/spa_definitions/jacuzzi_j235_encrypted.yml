@@ -6,6 +6,12 @@ serial_number: Not Set
 message_configuration:
   0xc4:
     - name: current_temperature
+      home_assistant:
+        entity_category: diagnostic
+        name: Current Water Temperature,
+        icon: mdi:coolant-temperature,
+        unit_of_measurement: "C"
+        device_class: temperature,
       offset: 5
       length: 1
       xor: 0x02

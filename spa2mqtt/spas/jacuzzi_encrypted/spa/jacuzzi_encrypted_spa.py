@@ -23,12 +23,11 @@ class JacuzziEncryptedSpa(Spa):
         pkt = JacuzziEncryptedPacket(payload)
         message = JacuzziEncryptedMessageFactory.from_packet(pkt, self.message_configuration)
 
-        # sys.exit(1)
         match pkt.as_enum():
             # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of
             # each message type for the time being.
             case JacuzziEncryptedPacketType.STATUS_UPDATE:
-                message.parse()
+                self.mqtt.handle_updates(data=message.parse(), message_config=self.message_configuration, message=message)
                 pass
             case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
                 pass

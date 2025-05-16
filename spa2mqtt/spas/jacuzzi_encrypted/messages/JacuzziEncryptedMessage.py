@@ -8,7 +8,7 @@ from spa2mqtt.spas.jacuzzi_encrypted.packet_types import JacuzziEncryptedPacketT
 @JacuzziEncryptedMessageFactory.register(JacuzziEncryptedPacketType.STATUS_UPDATE)
 class JacuzziStatusMessage(Message):
     def parse(self):
-        print(self.decode_params(self.message_configuration))
+        return self.decode_params(self.message_configuration)
 
 
 @JacuzziEncryptedMessageFactory.register(JacuzziEncryptedPacketType.LIGHTS_UPDATE)

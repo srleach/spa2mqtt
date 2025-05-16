@@ -9,7 +9,8 @@ class Spa:
     message_configuration: dict
     serial_number: str
 
-    def __init__(self, model: str, serial_number: str, message_configuration: dict = {}):
+    def __init__(self, model: str, serial_number: str, message_configuration: dict = {}, mqtt = None):
+        self.mqtt = mqtt
         self.serial_number = serial_number
         self.message_configuration = message_configuration
         self.model_name = model

@@ -6,9 +6,13 @@ from spa2mqtt.spas.base.packet_types import PacketType
 
 class Spa:
     model_name: str
+    message_configuration: dict
+    serial_number: str
 
-    def __init__(self, model_name: str):
-        self.model_name = model_name
+    def __init__(self, model: str, serial_number: str, message_configuration: dict = {}):
+        self.serial_number = serial_number
+        self.message_configuration = message_configuration
+        self.model_name = model
 
     def process_update(self, timestamp: datetime, message: bytes):
         """
@@ -19,8 +23,6 @@ class Spa:
         :param message:
         :return:
         """
-        # print(f"Message from {self.model_name} at {timestamp.time().isoformat()}: Len {len(message)}")
-
         pkt = Packet(message)
 
         match pkt.as_enum():

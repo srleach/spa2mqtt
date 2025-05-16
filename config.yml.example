@@ -1,12 +1,10 @@
 spa:
-  address: "192.168.1.100"
-  port: 8899
-  communicator: Communicator
-  variant: JacuzziEncrypted
-  model_name: Jacuzzi J235
-  serial_number: ABV_2312
+  connection:
+    spa_address: "192.168.1.100"
+    spa_port: 8899
+  config: jacuzzi_j235_encrypted
 mqtt:
-  broker: "mqtt.example.com"
+  broker: "192.168.26.7"
   port: 1883
   username: "user"
   password: "pass"

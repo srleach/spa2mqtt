@@ -55,6 +55,9 @@ class Communicator:
         except (asyncio.TimeoutError, ConnectionRefusedError):
             self.logger.error("Failed to establish connection to spa.")
             return False
+        except Exception as e:
+            self.logger.error("Failed to establish connection to spa: ", str(e))
+            return False
 
     async def attach_update_handler(self, spa_process_update_cb: Callable[[datetime.datetime, bytes], bool]):
         """

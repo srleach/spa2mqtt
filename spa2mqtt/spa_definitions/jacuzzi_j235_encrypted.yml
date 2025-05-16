@@ -1,0 +1,5 @@
+family: jacuzzi_encrypted
+communicator: JacuzziEncryptedCommunicator
+spa: JacuzziEncryptedSpa
+model_name: Jacuzzi J235
+serial_number: FAKE_SERIAL_NUMBER

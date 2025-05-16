@@ -21,7 +21,7 @@ class JacuzziEncryptedSpa(Spa):
 
         pkt = JacuzziEncryptedPacket(payload)
         message = JacuzziEncryptedMessageFactory.from_packet(pkt)
-
+        print(pkt)
 
         match pkt.as_enum():
             # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of

@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import sys
 from typing import Callable
 
 
@@ -12,6 +13,7 @@ class Communicator:
     writer: asyncio.StreamWriter = None
     last_packet: datetime.datetime = None
     logger: logging.Logger = None
+    break_on_exception = True
 
     # Persist our callbacks
     spa_process_update_cb: Callable[[datetime.datetime, bytes], bool]
@@ -101,6 +103,11 @@ class Communicator:
         await self.attach_update_handler(spa_process_update_cb)
         await self.establish_transport()
 
+        # DEBUGGING
+        full_packet = bytearray.fromhex("7e26ffafc4c5cea1c0cfc3b236ceca85caf7d655d19fd2d1c9df5eefdc6adad9958286e5e4e33e7e")
+        self.process_update(full_packet)
+        sys.exit(1)
+
         while True:
 
             # Last Packet Sentinel - we'll do a check here to verify we haven't possibly lost connection with the tub.
@@ -118,7 +125,8 @@ class Communicator:
                     continue
 
                 try:
-                    full_data = await self._read_exactly(length_byte + 1, timeout=5)
+                    # TODO: Verify this - we've removed the appended length field
+                    full_data = await self._read_exactly(length_byte, timeout=5)
                 except ValueError as e:
                     raise e
 
@@ -139,5 +147,8 @@ class Communicator:
             except Exception as e:
 
                 self.logger.warning(f"{str(e)} when parsing payload {full_packet}")
+
+                if self.break_on_exception is True:
+                    raise e
 
                 continue

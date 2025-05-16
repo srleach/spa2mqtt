@@ -23,6 +23,11 @@ class JacuzziEncryptedPacket(Packet):
             return None
 
     def xormsg(self, data: bytes) -> list[int]:
+        """
+        Sourced from HyperactiveJ
+        :param data:
+        :return:
+        """
         decoded = []
         for i in range(0, len(data) - 1, 2):
             decoded.append(data[i] ^ data[i + 1] ^ 0x01)
@@ -36,5 +41,6 @@ class JacuzziEncryptedPacket(Packet):
     def data(self) -> list[int]:
         if self.as_enum() in self.ENCRYPTED_PACKET_TYPES:
             # Use same logic: slice encrypted body from raw
-            return self.xormsg(self.raw[7:-2])
-        return list(self.payload)
+            return self.xormsg(self.body)
+
+        return list(self.body)

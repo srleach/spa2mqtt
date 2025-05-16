@@ -9,8 +9,10 @@ class Message():
     repsonsible for the actual meaningful content.
     """
     pkt: Packet = None
+    message_configuration: list[dict] = []
 
-    def __init__(self, pkt: Packet):
+    def __init__(self, pkt: Packet, message_configuration: list[dict]):
+        self.message_configuration = message_configuration
         self.pkt = pkt
 
     def decode_params(self, schema: list[dict]) -> dict:

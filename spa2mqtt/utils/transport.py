@@ -12,8 +12,8 @@ def load_class(module_name: str, class_name: str):
     return getattr(module, class_name)
 
 
-def make_tub(family: str, spa_variant: str, tub_model: str):  # TODO: Hint Return Type...
-    return load_class(f"spa2mqtt.spas.{family}.spa", spa_variant)(tub_model)
+def make_tub(family: str, spa_variant: str, args):  # TODO: Hint Return Type...
+    return load_class(f"spa2mqtt.spas.{family}.spa", spa_variant)(**args)
 
 
 def make_communicator(family: str, communicator: str, args) -> Communicator:

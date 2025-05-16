@@ -17,7 +17,12 @@ class JacuzziEncryptedMessageFactory:
         return decorator
 
     @classmethod
-    def from_packet(cls, packet):
+    def from_packet(cls, packet, message_configuration: dict):
         packet_type = packet.as_enum()
         subclass = cls._message_map.get(packet_type, Message)
-        return subclass(packet)
+
+        # TODO: this could theoretically not be a list
+        config: list[dict] = message_configuration.get(int(packet_type), [])
+
+        return subclass(packet, config)
+

@@ -19,8 +19,14 @@ async def main():
 
     tub_config = get_variant_configuration(variant)
 
+    configuration = {
+        "message_configuration": tub_config.get('message_configuration'),
+        "model": spaconfig.get('model', tub_config.get('model')),
+        "serial_number": spaconfig.get('serial_number', tub_config.get('serial_number'))
+    }
+
     communicator = make_communicator(tub_config.get('family'), tub_config.get('communicator'), spaconfig.get('connection'))
-    spa = make_tub(tub_config.get('family'), tub_config.get('spa'), tub_config.get('model_name'))
+    spa = make_tub(tub_config.get('family'), tub_config.get('spa'), configuration)
 
     await communicator.listen(spa.process_update)
 

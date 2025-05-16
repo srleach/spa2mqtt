@@ -2,4 +2,18 @@ family: jacuzzi_encrypted
 communicator: JacuzziEncryptedCommunicator
 spa: JacuzziEncryptedSpa
 model_name: Jacuzzi J235
-serial_number: FAKE_SERIAL_NUMBER
+serial_number: Not Set
+message_configuration:
+  0xc4:
+    - name: current_temperature
+      offset: 5
+      length: 1
+      xor: 0x02
+      scale: 0.5  # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
+    - name: water_life_remaining
+      offset: 12
+      length: 1
+    - name: filter_life_remaining
+      offset: 3
+      length: 1
+

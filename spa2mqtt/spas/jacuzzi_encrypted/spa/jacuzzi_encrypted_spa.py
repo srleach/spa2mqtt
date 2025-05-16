@@ -27,7 +27,7 @@ class JacuzziEncryptedSpa(Spa):
             # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of
             # each message type for the time being.
             case JacuzziEncryptedPacketType.STATUS_UPDATE:
-                print(message.parse())
+                message.parse()
                 pass
             case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
                 pass

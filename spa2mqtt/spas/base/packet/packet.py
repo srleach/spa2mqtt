@@ -71,8 +71,6 @@ class Packet:
 
         body = raw[5:-2]
 
-        print(body)
-
         return cls(raw=raw, channel=channel, mid=mid, packet_type=packet_type, payload=raw, len=length,
                    checksum=checksum, body=body)
 

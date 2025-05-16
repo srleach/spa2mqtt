@@ -103,10 +103,10 @@ class Communicator:
         await self.attach_update_handler(spa_process_update_cb)
         await self.establish_transport()
 
-        # DEBUGGING
-        full_packet = bytearray.fromhex("7e26ffafc4c5cea1c0cfc3b236ceca85caf7d655d19fd2d1c9df5eefdc6adad9958286e5e4e33e7e")
-        self.process_update(full_packet)
-        sys.exit(1)
+        # DEBUGGING - Let's TODO this into some tests and not be lazy.
+        # full_packet = bytearray.fromhex("7e26ffafc4c5cea1c0cfc3b236ceca85caf7d655d19fd2d1c9df5eefdc6adad9958286e5e4e33e7e")
+        # self.process_update(full_packet)
+        # sys.exit(1)
 
         while True:
 

@@ -11,10 +11,6 @@ async def main():
     jacuzzi_communicator = JacuzziEncryptedCommunicator('192.168.25.73', 8899)
     spa = JacuzziEncryptedSpa("Jacuzzi J235")
 
-    print(spa, jacuzzi_communicator)
-
-    print("Stub")
-
     await jacuzzi_communicator.listen(spa.process_update)
 
 

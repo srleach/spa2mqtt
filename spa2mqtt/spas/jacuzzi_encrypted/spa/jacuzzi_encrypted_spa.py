@@ -20,20 +20,21 @@ class JacuzziEncryptedSpa(Spa):
         pkt = JacuzziEncryptedPacket(message)
 
         match pkt.as_enum():
+            # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of
+            # each message type for the time being.
             case JacuzziEncryptedPacketType.STATUS_UPDATE | JacuzziEncryptedPacketType.STATUS_UPDATE_ALT_16:
-                print(pkt)
                 pass
             case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
                 pass
             case JacuzziEncryptedPacketType.LIGHTS_UPDATE | JacuzziEncryptedPacketType.LIGHTS_UPDATE_ALT_23:
+                print(pkt.as_enum())
                 pass
             case JacuzziEncryptedPacketType.CLEAR_TO_SEND:
                 pass
             case JacuzziEncryptedPacketType.CC_REQ | JacuzziEncryptedPacketType.CC_REQ_ALT_17:
                 pass
             case _:
-                print("Spa emitted an unrecognised message")
-                print(pkt)
+                pass
 
         # Here's the place to deviate behaviour if we want to selectively process certain packet types. I suppose
         # We should think about implementing a channelising mechansim.
@@ -41,3 +42,4 @@ class JacuzziEncryptedSpa(Spa):
         # <Packet STATUS_UPDATE ch=0x0a mid=0xbf type=0xc4 payload=...>
 
         return True
+

@@ -10,7 +10,7 @@ class Communicator:
     """
     reader: asyncio.StreamReader = None
     writer: asyncio.StreamWriter = None
-    last_connected: datetime.datetime = None
+    last_packet: datetime.datetime = None
     logger: logging.Logger = None
 
     # Persist our callbacks
@@ -22,6 +22,7 @@ class Communicator:
         self.spa_address = spa_address
         self.spa_port = spa_port
         self.logger = logger
+        self.logger.info(f"Instantiated default communicator with target {spa_address}:{spa_port}")
 
     def process_update(self, bytes):
         self.logger.debug(f"Processing message {bytes}")
@@ -38,7 +39,7 @@ class Communicator:
                 self.spa_address, self.spa_port
             )
 
-            self.last_connected = datetime.datetime.now()
+            self.last_packet = datetime.datetime.now()
             self.logger.info("Connected to spa.")
             return True
 
@@ -101,6 +102,10 @@ class Communicator:
         await self.establish_transport()
 
         while True:
+
+            # Last Packet Sentinel - we'll do a check here to verify we haven't possibly lost connection with the tub.
+            # We'll take some action if so. Likely best destroying this instance and recreating or asserting the conn.
+
             full_packet = bytes()
             try:
                 # Get a valid start marker and length byte
@@ -129,6 +134,7 @@ class Communicator:
 
                 # Invoke the callback passed from the spa entity.
                 self.process_update(full_packet)
+                self.last_packet = datetime.datetime.now()
 
             except Exception as e:
 

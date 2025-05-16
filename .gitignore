@@ -174,4 +174,4 @@ cython_debug/
 .pypirc
 
 # Ignore a config.yml if present
-spa2mqtt/config.yml
+config.yml

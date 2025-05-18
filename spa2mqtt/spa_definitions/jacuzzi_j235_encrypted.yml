@@ -15,6 +15,14 @@ message_configuration:
       length: 1
       xor: 0x02
       scale: 0.5  # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
+    - name: setpoint_temperature
+      home_assistant:
+        name: Target Water Temperature
+        icon: mdi:target
+        unit_of_measurement: "C"
+        device_class: temperature
+      offset: 8
+      scale: 0.5 # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
     - name: water_life_remaining
       home_assistant:
         name: Water Life Remaining

@@ -1,14 +1,11 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  jacuzzi2mqtt:
+  spa2mqtt:
     build: .
-    container_name: Jacuzzi2MQTT
+    container_name: spa2mqtt
+    restart: unless-stopped
     volumes:
-      - .:/app
-    working_dir: /app/spa2mqtt
-    command: python -h
+      - .:/app:ro
     environment:
-      - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
-    restart: on-failure

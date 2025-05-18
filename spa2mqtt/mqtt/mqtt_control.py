@@ -1,5 +1,4 @@
 import logging
-import sys
 from logging import Logger
 
 from ha_mqtt_discoverable import Settings, DeviceInfo
@@ -68,19 +67,4 @@ class MQTTControl:
                 # Temporarily assume a standard sensor
                 self.sensor(entity_key, ha, value)
 
-        sys.exit(1)
 
-
-
-
-
-
-
-
-
-        if message_config['home_assistant'] is None:
-            self.logger.debug("Skipping sensor type")
-            return True
-
-        print(message_config)
-        print(data)

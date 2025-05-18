@@ -1,12 +1,7 @@
 import asyncio
 import logging
-import sys
 
-import yaml
-
-from spa2mqtt.mqtt.mqtt_control import MQTTControl
-from spa2mqtt.spas.jacuzzi_encrypted.communicator import JacuzziEncryptedCommunicator
-from spa2mqtt.spas.jacuzzi_encrypted.spa import JacuzziEncryptedSpa
+from spa2mqtt.mqtt import MQTTControl
 from spa2mqtt.utils import get_application_configuration, make_communicator, get_variant_configuration, make_tub
 
 
@@ -21,7 +16,7 @@ async def main():
 
     tub_config = get_variant_configuration(variant)
 
-    mqtt = MQTTControl(broker_host="192.168.1.7", broker_port=mqttconfig.get('port'))
+    mqtt = MQTTControl(broker_host=mqttconfig.get('broker'), broker_port=mqttconfig.get('port'))
 
     configuration = {"message_configuration": tub_config.get('message_configuration'),
                      "model": spaconfig.get('model', tub_config.get('model')),

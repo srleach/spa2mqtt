@@ -1,3 +1,4 @@
+import csv
 import sys
 from datetime import datetime
 
@@ -9,6 +10,13 @@ from spa2mqtt.spas.jacuzzi_encrypted.messages.JacuzziEncryptedMessage import *
 
 
 class JacuzziEncryptedSpa(Spa):
+
+    def __init__(self, model: str, serial_number: str, message_configuration: dict = {}, mqtt=None):
+        super().__init__(model, serial_number, message_configuration, mqtt)
+
+        self.debug_file = open("debug_messages.csv", "a", newline="")
+        self.writer = csv.writer(self.debug_file)
+
     def process_update(self, timestamp: datetime, payload: bytes):
         """
         We're doing a callback back into the Jacuzzi responsibility here to keep the decoding within the domain of the
@@ -27,6 +35,7 @@ class JacuzziEncryptedSpa(Spa):
             # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of
             # each message type for the time being.
             case JacuzziEncryptedPacketType.STATUS_UPDATE:
+                self.writer.writerow(pkt.data)
                 self.mqtt.handle_updates(data=message.parse(), message_config=self.message_configuration, message=message)
                 pass
             case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:

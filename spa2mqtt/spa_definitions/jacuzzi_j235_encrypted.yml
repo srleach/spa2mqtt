@@ -62,6 +62,16 @@ message_configuration:
       offset: 12
       length: 1
     - name: filter_life_remaining
+      home_assistant:
+        name: Filter Life Remaining
+        icon: mdi:filter-check
+        unit_of_measurement: "days"
+        entity_category: diagnostic
       offset: 3
-      length: 1
-
+    - name: clearray_life_remaining
+      home_assistant:
+        name: Clearray Life Remaining
+        icon: mdi:lightbulb-cfl
+        unit_of_measurement: "days"
+        entity_category: diagnostic
+      offset: 9

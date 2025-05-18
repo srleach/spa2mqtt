@@ -1,8 +1,34 @@
 # spa2mqtt
 An experimental tool building upon community research to control Jacuzzi spas via the exposed RS485 headers on the 
 main control board.
+
+This is opinionated. It assumes you're using MQTT and ultimately consuming this from within home assistant. 
+
+# Warning: 
+This works for my use case, and I'm making a good faith attempt at trying to get something that works for many. 
+I can't take responsibility for any damage this may cause, or that you may cause when wiring things in. Anything really!
+A spa contains high voltage, and likely a huge potential fault current so exercise incredible caution when doing 
+anything within it.
  
 Builds upon SundanceRS485 as linked below from HyperactiveJ and those inspiring that work too.
+
+## Usage
+
+1. Create a config.yml in the repository root: `cp config.yml.example config.yml`
+2. Update the variables required in the config to get connected to your tub and MQTT.
+   3. You'll need to ensure you've set up the IP address and port of the tub's RS485 converter. If you're using the 
+      EW11A then your port is likely to be 8899, if you're using the prolink, I believe you can still connect 
+      but I haven't got one to test.
+3. docker-compose run -d .
+
+## Issues
+If it doesn't work for your tub, i'd encourage you to open an issue with info. I'd love to make this work for a range
+of hardware, and if you're happy to assist by providing raw data packets from the tub, I'm happy to make an effort to 
+try and get it to work within this framework.
+
+Of course, if you're able - I also welcome you to join in and contribute. I am not a Python developer by trade, and many
+of my architectural and implementation details are biased by other languages and patterns, and I am open to any positive
+change or suggestions.
 
 ## Concepts:
 - Prior implementations are tightly coupled to a board type (as currently is this)
@@ -17,15 +43,13 @@ Builds upon SundanceRS485 as linked below from HyperactiveJ and those inspiring 
 TBC: RS485 -> Wi-Fi adapter
 Include wiring example
 
+## Upstream 
+As above, the solution is opinionated. It assumes you're using MQTT to feed home assistant and as a result some 
+assumptions are made. If there's demand, I've left the MQTT/HA specifics at arms length from the actual spa comms side
+of things, and we can always work to decouple this if the community so desires.
+
 ## Detecting Config
-Temp scale (aka units) may be represented in the status update on data[14] 
-
-> It does not currently appear to be in 14 or 18. Further research required.
-
-```python
-if i == 14:
-    self.log.info(f"TS: {data[i] & 0x01}") # 1 = tscale_c else tscale_f
-```
+TBC
 
 ## Sending Control Commands
 TBC
@@ -42,13 +66,15 @@ TBC
 | J235  | 2018 |       | Yes       | EW11A        | TBC      | 12v +/, A/B  |
 
 ## TODO
-- Clean up sundanceRS485.py and reduce the unnecessary/debugging code that isn't called or used
 - Map out values of interest that we don't currently have valid results for
   - Filter Life
   - Water Life
   - ClearRay Life
   - Flow sensor?
   - 2nd Thermistor?
+- Find an appropriate way to implement a control loop for input that requires us to hit a number of buttons. 
+- Find a way to directly control the temperature if at all possible. This may need someone with a prolink and an EW11A 
+to sniff the bus traffic. Open an issue if this describes you!
 
 ## Credits, Inspiration & Sources
 - https://github.com/HyperActiveJ/SundanceJacuzzi_HomeAssistant_TCP_RS485 Initial Working Code & inspiration to build upon it

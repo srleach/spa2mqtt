@@ -68,6 +68,7 @@ message_configuration:
         unit_of_measurement: "days"
         entity_category: diagnostic
       offset: 3
+      xor: 14
     - name: clearray_life_remaining
       home_assistant:
         name: Clearray Life Remaining

@@ -66,5 +66,3 @@ class MQTTControl:
             if ha is not None and value is not None:
                 # Temporarily assume a standard sensor
                 self.sensor(entity_key, ha, value)
-
-

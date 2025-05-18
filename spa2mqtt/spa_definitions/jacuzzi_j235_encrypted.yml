@@ -3,6 +3,10 @@ communicator: JacuzziEncryptedCommunicator
 spa: JacuzziEncryptedSpa
 model_name: Jacuzzi J235
 serial_number: Not Set
+sensor_update_intervals:
+  default: 60
+#  overrides:
+#    "setpoint_temperature": 1.0
 message_configuration:
   0xc4:
     - name: current_temperature

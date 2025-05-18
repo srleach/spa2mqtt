@@ -16,7 +16,8 @@ async def main():
 
     tub_config = get_variant_configuration(variant)
 
-    mqtt = MQTTControl(broker_host=mqttconfig.get('broker'), broker_port=mqttconfig.get('port'))
+    mqtt = MQTTControl(broker_host=mqttconfig.get('broker'), broker_port=mqttconfig.get('port'),
+                       sensor_update_intervals=tub_config.get('sensor_update_intervals', {}))
 
     communicator = make_communicator(tub_config.get('family'), tub_config.get('communicator'),
                                      spaconfig.get('connection'))

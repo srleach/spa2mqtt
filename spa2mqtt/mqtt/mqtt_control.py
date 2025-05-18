@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from logging import Logger
 
 from ha_mqtt_discoverable import Settings, DeviceInfo
@@ -8,16 +9,22 @@ from paho.mqtt.client import MQTTMessage, Client
 
 
 class MQTTControl:
-    skip_config_ids = []
+    sensor_updated_at = {}
+    default_interval: int
+    interval_overrides: dict
+    last_values: dict = {}
     entities = {}  # Persistence
     spa = None
 
-    def __init__(self, logger: Logger = None, broker_host="localhost", broker_port=1883, device="Jacuzzi J235",
+    def __init__(self, sensor_update_intervals: dict = {}, logger: Logger = None, broker_host="localhost", broker_port=1883, device="Jacuzzi J235",
                  device_id="185569045"):
+        self.sensor_update_intervals = sensor_update_intervals
         self.mqtt_settings = Settings.MQTT(host=broker_host, port=broker_port)
         self.device_name = device
         self.device_id = device_id
         self.logger = logger or logging.getLogger(self.device_name)
+        self.default_interval = sensor_update_intervals.get('default', 15)
+        self.interval_overrides = sensor_update_intervals.get('overrides', {})
 
     # Configure the required parameters for the MQTT broker
 
@@ -52,10 +59,28 @@ class MQTTControl:
             sensor = BinarySensor(settings) if as_binary else Sensor(settings)
             self.entities[id] = sensor
 
+        if not self.sensor_can_update(id, value):
+            return
+
         if as_binary:
             sensor.on() if value else sensor.off()
         else:
             sensor.set_state(value)
+
+        self.sensor_updated_at[id] = datetime.now().timestamp()
+        self.last_values[id] = value
+
+    def sensor_can_update(self, sensor_id, value):
+        if sensor_id not in self.sensor_updated_at:
+            return True
+
+        if self.last_values.get(sensor_id, None) != value:
+            return True
+
+        interval = self.interval_overrides.get(sensor_id, self.default_interval)
+
+        return (datetime.now().timestamp() - self.sensor_updated_at[sensor_id]) >= interval
+
 
     def handle_sensor_updates(self, message):
         # Handle the sensors based on the info returned from our tub.

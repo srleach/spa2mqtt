@@ -42,17 +42,20 @@ class MQTTControl:
     def light_callback(self, client: Client, user_data, message: MQTTMessage):
         pass
 
-    def sensor(self, id, sensor_config, value):
+    def sensor(self, id, sensor_config, value, as_binary=False):
         if id in self.entities:
             sensor = self.entities[id]
         else:
             params = {**sensor_config, **{"device": self.get_device_info()}, "unique_id": id}
-            sensor_info = SensorInfo(**params)
+            sensor_info = BinarySensorInfo(**params) if as_binary else SensorInfo(**params)
             settings = Settings(mqtt=self.mqtt_settings, entity=sensor_info)
-            sensor = Sensor(settings)
+            sensor = BinarySensor(settings) if as_binary else Sensor(settings)
             self.entities[id] = sensor
 
-        sensor.set_state(value)
+        if as_binary:
+            sensor.on() if value else sensor.off()
+        else:
+            sensor.set_state(value)
 
     def handle_updates(self, data, message_config, message):
         # Handle the sensors based on the info returned from our tub.
@@ -61,8 +64,9 @@ class MQTTControl:
         # NFI about lights, temp setting and other modes yet
         for item in message.message_configuration:
             ha = item.get('home_assistant')
+            binary_sensor = item.get('binary_sensor', False)
             entity_key = item.get('name')
             value = data.get(entity_key)
             if ha is not None and value is not None:
                 # Temporarily assume a standard sensor
-                self.sensor(entity_key, ha, value)
+                self.sensor(entity_key, ha, value, as_binary=binary_sensor)

@@ -50,7 +50,9 @@ TBC
   - Flow sensor?
   - 2nd Thermistor?
 
-## Credits & Sources
-- https://github.com/HyperActiveJ/SundanceJacuzzi_HomeAssistant_TCP_RS485
-  - Initial Working Code
-  - https://github.com/HyperActiveJ/sundance780-jacuzzi-balboa-rs485-tcp/issues/1 for similar hardware
+## Credits, Inspiration & Sources
+- https://github.com/HyperActiveJ/SundanceJacuzzi_HomeAssistant_TCP_RS485 Initial Working Code & inspiration to build upon it
+- https://github.com/HyperActiveJ/sundance780-jacuzzi-balboa-rs485-tcp/issues/1 for similar hardware
+- https://github.com/garbled1/pybalboa for some of the minutiae around comms with the tub itself
+- https://github.com/ccutrer/balboa_worldwide_app for more of the above
+- https://github.com/jackbrown1993/Jacuzzi-RS485 for his building upon the work also listed above

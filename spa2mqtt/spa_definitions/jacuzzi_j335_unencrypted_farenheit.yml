@@ -1,0 +1,57 @@
+family: base
+communicator: Communicator
+spa: Spa
+model_name: Jacuzzi J335
+serial_number: Not Set
+sensor_update_intervals:
+  default: 60
+#  overrides:
+#    "setpoint_temperature": 1.0
+message_configuration:
+  0xc4:
+    - name: current_temperature
+      home_assistant:
+        name: Current Water Temperature
+        icon: mdi:coolant-temperature
+        unit_of_measurement: "°F"
+        device_class: temperature
+      offset: 5
+      length: 1
+      xor: 0x02
+    - name: setpoint_temperature
+      home_assistant:
+        name: Target Water Temperature
+        icon: mdi:target
+        unit_of_measurement: "°F"
+        device_class: temperature
+      offset: 8
+    - name: circulation_pump_status
+      binary_sensor: True
+      home_assistant:
+        name: Circulation Pump Status
+        icon: mdi:water-pump
+        entity_category: diagnostic
+        device_class: running
+      offset: 1
+      shift: 6
+      mask: 1
+    - name: main_pump_status
+      binary_sensor: True
+      home_assistant:
+        name: Main Pump Status
+        icon: mdi:water-pump
+        entity_category: diagnostic
+        device_class: running
+      offset: 1
+      shift: 2
+      mask: 1 # This is possibly not necessary in this particular operation
+    - name: secondary_pump_status
+      binary_sensor: True
+      home_assistant:
+        name: Secondary Pump Status
+        icon: mdi:water-pump
+        entity_category: diagnostic
+        device_class: running
+      offset: 2
+      shift: 4
+      mask: 1 # This is possibly not necessary in this particular operation

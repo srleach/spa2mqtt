@@ -1,9 +1,13 @@
+import sys
+
 from spa2mqtt.spas.base.packet import Packet
 
 
 class Message():
     """
     A base class to contain common logic for messages from the tub.
+
+    TODO: Give me a logger?
 
     A message is crafted from a packet, where packet represents a raw update from the tub, where messages are
     repsonsible for the actual meaningful content.
@@ -35,6 +39,14 @@ class Message():
                 value &= entry["mask"]
             if "scale" in entry:
                 value = value * entry["scale"]
+
+            # We should endeavour to keep this to last unless there's a good reason to post-process something else.
+            if "output_map" in entry:
+                if value in entry["output_map"]:
+                    value = entry["output_map"][value]
+                else:
+                    # self.logger.warning(f"Unknown output map: {value}")
+                    raise Exception(f"Unknown value mapping for [{value}] in output map ", entry["output_map"])
 
             result[name] = value
         return result

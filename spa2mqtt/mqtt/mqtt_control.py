@@ -57,7 +57,7 @@ class MQTTControl:
         else:
             sensor.set_state(value)
 
-    def handle_updates(self, data, message_config, message):
+    def handle_sensor_updates(self, message):
         # Handle the sensors based on the info returned from our tub.
         # Sensors & Binary Sensors can be combined - use a `type` field.
         # Buttons must be done separately.
@@ -66,7 +66,7 @@ class MQTTControl:
             ha = item.get('home_assistant')
             binary_sensor = item.get('binary_sensor', False)
             entity_key = item.get('name')
-            value = data.get(entity_key)
+            value = message.parse().get(entity_key)
             if ha is not None and value is not None:
                 # Temporarily assume a standard sensor
                 self.sensor(entity_key, ha, value, as_binary=binary_sensor)

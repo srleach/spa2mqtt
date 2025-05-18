@@ -75,4 +75,4 @@ message_configuration:
         icon: mdi:lightbulb-cfl
         unit_of_measurement: "days"
         entity_category: diagnostic
-      offset: 9
+      offset: 13

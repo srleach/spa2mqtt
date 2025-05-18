@@ -175,3 +175,7 @@ class Communicator:
                     raise e
 
                 continue
+
+    def send_message_cb(self):
+        # print("Sending Message Stub", self.last_packet)
+        pass

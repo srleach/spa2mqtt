@@ -7,3 +7,6 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - VARIANT_DEFINITION=${VARIANT_DEFINITION}
+      - SPA_IP=${SPA_IP}
+      - SPA_PORT=${SPA_PORT}

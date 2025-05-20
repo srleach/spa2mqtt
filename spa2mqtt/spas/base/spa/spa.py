@@ -41,9 +41,7 @@ class Spa:
         # pkt = Packet(message)
         if self.debug:
             self.writer.writerow([timestamp, message.hex()])
-            if self.packets_written % 100 == 0:
-                print("Written Block")
-
+            print(f"{timestamp}_: {message.hex()}")
             self.packets_written += 1
             self.debug_file.flush()
 

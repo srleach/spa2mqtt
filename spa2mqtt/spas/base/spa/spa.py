@@ -1,7 +1,9 @@
 import csv
 from datetime import datetime
 
+from spa2mqtt.spas.base.messages.message_factory import JacuzziUnencryptedMessageFactory
 from spa2mqtt.spas.base.packet import Packet
+from spa2mqtt.spas.base.packet_types import PacketType
 
 
 class Spa:
@@ -38,7 +40,17 @@ class Spa:
         :return:
         """
         pkt = Packet.from_raw(message)
-        print(pkt)
+        message = JacuzziUnencryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
+
+        match pkt.as_enum():
+            case PacketType.FILTER_CYCLE:
+                print(pkt)
+                self.mqtt.handle_sensor_updates(message=message)
+            case PacketType.NOT_DISCOVERED_16 | PacketType.NOT_DISCOVERED_23:
+                pass
+            case _:
+                print(pkt)
+                pass
 
         # The only deviation from the encrypted packet we need to take is to assert we're paying attention to the MID,
         # Channel and Type - and the type. Our type interpolation on the PacketType enum may not be bang on.

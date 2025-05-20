@@ -60,11 +60,15 @@ class SimulatedCommunicator(Communicator):
         await self.attach_update_handler(spa_process_update_cb)
         await self.establish_transport()
 
-        with open(file=self.spa_address, mode='r') as spa_handle:
-            # Loop file, with delay, emitting each line as a message.
-            for line in spa_handle:
-                print(line.strip())
-                await asyncio.sleep(int(self.spa_port)/ 1000)
+        while True:
+            with open(file=self.spa_address, mode='r') as spa_handle:
+                # Loop file, with delay, emitting each line as a message.
+                for line in spa_handle:
+                    packet_contents = bytes.fromhex(line.split("_: ")[-1].strip())
+                    self.process_update(packet_contents)
+                    await asyncio.sleep(int(self.spa_port) / 1000)
+
+                spa_handle.close()
 
     def send_message_cb(self):
         # print("Sending Message Stub", self.last_packet)

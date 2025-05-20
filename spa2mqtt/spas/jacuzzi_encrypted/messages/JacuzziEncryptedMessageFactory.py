@@ -1,7 +1,7 @@
 from spa2mqtt.spas.base.messages.message import Message
 
-# This might result in circular dependency, but we need our decorators to be executed.
 
+# This might result in circular dependency, but we need our decorators to be executed.
 
 
 class JacuzziEncryptedMessageFactory:
@@ -25,4 +25,3 @@ class JacuzziEncryptedMessageFactory:
         config: list[dict] = message_configuration.get(int(packet_type), [])
 
         return subclass(packet, config)
-

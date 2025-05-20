@@ -14,13 +14,17 @@ DEBUG_MODE = False
 class JacuzziEncryptedSpa(Spa):
 
     def __init__(self, model: str, serial_number: str, communicator_send_cb,
-                 message_configuration: dict = {}, mqtt=None):
+                 message_configuration: dict = {}, mqtt=None, debug: bool = False):
 
-        super().__init__(model, serial_number, message_configuration, mqtt)
+        super().__init__(model=model, serial_number=serial_number, message_configuration=message_configuration, mqtt=mqtt, communicator_send_cb=communicator_send_cb)
 
+        self.debug = debug
         self.communicator_send_cb = communicator_send_cb
+        self.message_configuration = message_configuration
 
-        if DEBUG_MODE:
+
+        if self.debug:
+            print("Debug mode is on")
             self.debug_file = open("debug_messages.csv", "a", newline="")
             self.writer = csv.writer(self.debug_file)
 
@@ -36,7 +40,7 @@ class JacuzziEncryptedSpa(Spa):
         # print(f"Message from {self.model_name} at {timestamp.time().isoformat()}: Len {len(message)}")
 
         pkt = JacuzziEncryptedPacket(payload)
-        message = JacuzziEncryptedMessageFactory.from_packet(pkt, self.message_configuration)
+        message = JacuzziEncryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
 
         match pkt.as_enum():
             # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of

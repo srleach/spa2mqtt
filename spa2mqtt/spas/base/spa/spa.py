@@ -2,7 +2,6 @@ import csv
 from datetime import datetime
 
 from spa2mqtt.spas.base.packet import Packet
-from spa2mqtt.spas.base.packet_types import PacketType
 
 
 class Spa:
@@ -38,17 +37,16 @@ class Spa:
         :param message:
         :return:
         """
-        # pkt = Packet(message)
+        pkt = Packet.from_raw(message)
+        print(pkt)
+
+        # The only deviation from the encrypted packet we need to take is to assert we're paying attention to the MID,
+        # Channel and Type - and the type. Our type interpolation on the PacketType enum may not be bang on.
+
         if self.debug:
             self.writer.writerow([timestamp, message.hex()])
             print(f"{timestamp}_: {message.hex()}")
             self.packets_written += 1
             self.debug_file.flush()
-
-
-        # Here's the place to deviate behaviour if we want to selectively process certain packet types. I suppose
-        # We should think about implementing a channelising mechansim.
-        # print(pkt)
-        # <Packet STATUS_UPDATE ch=0x0a mid=0xbf type=0xc4 payload=...>
 
         return True

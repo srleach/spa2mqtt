@@ -41,13 +41,12 @@ class Packet:
         return (f"<Packet"
                 f" {label_str}"
                 f" ch=0x{self.channel:02x}"
-                f" ch=0x{self.channel:02x}"
                 f" len={self.len}"
                 f" mid=0x{self.mid:02x}"
                 f" checksum={self.checksum:02x}"
                 f" valid={self.cs_pass}"
                 f" type=0x{self.packet_type:02x}"
-                f" body={self.body.hex()}>"
+                f" body={self.body.hex() or None}"
                 f" raw={self.raw.hex()}"
                 f">")
 

@@ -16,7 +16,7 @@ def get_application_configuration(file: str = 'config.yml'):
                     "spa_address": os.environ.get("SPA_IP", "192.168.1.1"),
                     "spa_port": os.environ.get("SPA_PORT", "8899"),
                 },
-                "config": os.environ.get("VARIANT_DEFINITION", "config.yml"),
+                "config": os.environ.get("VARIANT_DEFINITION", "jacuzzi_j335_unencrypted_farenheit"),
                 "model": "Default Model"
             }
         }

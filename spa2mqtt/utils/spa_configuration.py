@@ -18,6 +18,10 @@ def get_application_configuration(file: str = 'config.yml'):
                 },
                 "config": os.environ.get("VARIANT_DEFINITION", "jacuzzi_j335_unencrypted_farenheit"),
                 "model": "Default Model"
+            },
+            "mqtt": {
+                "broker": os.environ.get("MQTT_BROKER", "192.168.1.7"),
+                "port": os.environ.get("MQTT_PORT", "1883"),
             }
         }
 

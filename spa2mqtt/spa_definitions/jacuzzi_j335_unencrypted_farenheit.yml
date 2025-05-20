@@ -1,5 +1,6 @@
 family: base
 communicator: Communicator
+debug: True
 spa: Spa
 model_name: Jacuzzi J335
 serial_number: Not Set

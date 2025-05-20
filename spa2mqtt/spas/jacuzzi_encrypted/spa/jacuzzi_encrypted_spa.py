@@ -9,7 +9,7 @@ from spa2mqtt.spas.jacuzzi_encrypted.packet import JacuzziEncryptedPacket
 # our messages expose the factory and base message entities to us
 from spa2mqtt.spas.jacuzzi_encrypted.messages.JacuzziEncryptedMessage import *
 
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 class JacuzziEncryptedSpa(Spa):
 
@@ -21,7 +21,7 @@ class JacuzziEncryptedSpa(Spa):
         self.communicator_send_cb = communicator_send_cb
 
         if DEBUG_MODE:
-            self.debug_file = open("debug_messages.csv", "a", newline="")
+            self.debug_file = open(f"{datetime.now().timestamp()}-debug_messages.csv", "a", newline="")
             self.writer = csv.writer(self.debug_file)
 
     def process_update(self, timestamp: datetime, payload: bytes):

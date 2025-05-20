@@ -13,7 +13,7 @@ class Communicator:
     writer: asyncio.StreamWriter = None
     last_packet: datetime.datetime = None
     logger: logging.Logger = None
-    break_on_exception = True
+    break_on_exception = False
 
     # Persist our callbacks
     spa_process_update_cb: Callable[[datetime.datetime, bytes], bool]

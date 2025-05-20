@@ -1,4 +1,6 @@
 import csv
+import sys
+from time import sleep
 
 # Extended multi-field map
 FIELD_MAP = {
@@ -44,6 +46,14 @@ FIELD_MAP = {
             "note": "SHIFT 2 MASK 1"
         },
     ],
+    3: [
+        {
+            "name": "Clearray Life Remain",
+            "transform": lambda b: (b ^ 0xff) - 5,
+            "label": "CR",
+            "note": "XOR 0xFF, Sub 5"
+        },
+    ],
     4: [
         {
             "name": "UNKNOWN (Maybe Clearray Active?)",
@@ -60,20 +70,13 @@ FIELD_MAP = {
             "label": "Curr. Temp",
             "note": "XOR 0x1"
         },
-
-        # {
-        #     "name": "Filter Life Shifted",
-        #     "transform": lambda b: (b >> 1) ^ 0x12,
-        #     "label": "FiltS",
-        #     "note": "SHR 1 + XOR 0x12"
-        # }
     ],
-    8: [
+    6: [
         {
-            "name": "Setpoint",
-            "transform": lambda b: b / 2,
-            "label": "Setpoint",
-            "note": "IDENTITY / 2"
+            "name": "",
+            "transform": lambda b: None,
+            "label": "",
+            "note": ""
         },
     ],
     7: [
@@ -88,6 +91,22 @@ FIELD_MAP = {
             "transform": lambda b: b >> 3,
             "label": "DAY",
             "note": "SHIFT 3"
+        },
+    ],
+    8: [
+        {
+            "name": "Setpoint",
+            "transform": lambda b: b / 2,
+            "label": "Setpoint",
+            "note": "IDENTITY / 2"
+        },
+    ],
+    9: [
+        {
+            "name": "",
+            "transform": lambda b: None,
+            "label": "",
+            "note": ""
         },
     ],
     10: [
@@ -107,6 +126,14 @@ FIELD_MAP = {
             "note": "IDENTITY"
         },
     ],
+    12: [
+        {
+            "name": "",
+            "transform": lambda b: None,
+            "label": "",
+            "note": ""
+        },
+    ],
     13: [
         {
             "name": "Clearray Life",
@@ -116,15 +143,22 @@ FIELD_MAP = {
         },
 
     ],
-    # 14: [
-    #     {
-    #         "name": "Possibly 2nd Temp Sensor?",
-    #         "transform": lambda b: b,
-    #         "label": "Temp2?",
-    #         "note": "IDENTITY"
-    #     },
-    #
-    # ],
+    14: [
+        {
+            "name": "",
+            "transform": lambda b: None,
+            "label": "",
+            "note": ""
+        },
+    ],
+    15: [
+        {
+            "name": "",
+            "transform": lambda b: None,
+            "label": "",
+            "note": ""
+        },
+    ],
 }
 
 def load_csv(path):
@@ -134,8 +168,8 @@ def load_csv(path):
 def render_packet_markdown(packet, field_map, index):
     lines = []
     lines.append(f"### Packet {index}\n")
-    lines.append("| Byte | Hex | Fields        | Decoded     | Transform(s)        |")
-    lines.append("|------|-----|----------------|-------------|----------------------|")
+    lines.append("| Byte | Hex | Fields                                       | Decoded     | Transform(s)                                                                                 |")
+    lines.append("|------|-----|----------------------------------------------|-------------|----------------------------------------------------------------------------------------------|")
 
     for i, byte in enumerate(packet):
         hex_val = f"{byte:02X}"
@@ -144,21 +178,22 @@ def render_packet_markdown(packet, field_map, index):
             field_names = ", ".join(f["label"] for f in fields)
             decoded_vals = ", ".join(str(f["transform"](byte)) for f in fields)
             notes = ", ".join(f["note"] for f in fields)
-            lines.append(f"| {i:>4} | {hex_val}  | {field_names:<14} | {decoded_vals:<11} | {notes:<20} |")
+            lines.append(f"| {i:>4} | {hex_val}  | {field_names:<44} | {decoded_vals:<11} | {notes:<92} |")
         else:
             lines.append(f"| {i:>4} | {hex_val}  |                  |             |                      |")
 
     return "\n".join(lines)
 
 def main():
-    csv_path = "debug_messages.csv"
+    csv_path = "1747660197.24942-debug_messages.csv"
     packets = load_csv(csv_path)
 
     # Show first 3 packets
-    for i, packet in enumerate(packets[-3:]):
+    for i, packet in enumerate(packets):
         markdown = render_packet_markdown(packet, FIELD_MAP, i)
         print(markdown)
         print()
+        sleep(0.5)
 
 if __name__ == "__main__":
     main()

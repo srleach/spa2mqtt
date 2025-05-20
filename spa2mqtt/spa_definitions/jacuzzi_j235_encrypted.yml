@@ -5,6 +5,7 @@ model_name: Jacuzzi J235
 serial_number: Not Set
 sensor_update_intervals:
   default: 60
+  # You can include the below block to override the interval for individual sensors.
 #  overrides:
 #    "setpoint_temperature": 1.0
 message_configuration:
@@ -57,26 +58,56 @@ message_configuration:
       offset: 2
       shift: 4
       mask: 1 # This is possibly not necessary in this particular operation
-    - name: water_life_remaining
+    - name: manual_circulation_call
+      binary_sensor: True
       home_assistant:
-        name: Water Life Remaining
-        icon: mdi:water-check
-        unit_of_measurement: "days"
+        name: Manual Circulation Call
+        icon: mdi:water-pump
         entity_category: diagnostic
-      offset: 12
-      length: 1
-    - name: filter_life_remaining
+        device_class: running
+      offset: 1
+      shift: 7
+      mask: 1 # This is possibly not necessary in this particular operation
+    - name: heater_active
+      binary_sensor: True
       home_assistant:
-        name: Filter Life Remaining
+        name: Heater Active
+        icon: mdi:radiator
+        entity_category: diagnostic
+        device_class: heat
+      offset: 10
+      shift: 6
+      mask: 1 # This is possibly not necessary in this particular operation
+    - name: clearray_active
+      binary_sensor: True
+      home_assistant:
+        name: ClearRay Active
+        icon: mdi:lightbulb-cfl
+        entity_category: diagnostic
+        device_class: light
+      offset: 5
+      shift: 6
+      mask: 1 # This is possibly not necessary in this particular operation
+#    - name: water_life_remaining
+#      home_assistant:
+#        name: Water Life Remaining
+#        icon: mdi:water-check
+#        unit_of_measurement: "days"
+#        entity_category: diagnostic
+#      offset: 12
+#      length: 1
+    - name: clearray_life_remaining
+      home_assistant:
+        name: Clearray Life Remaining
         icon: mdi:filter-check
         unit_of_measurement: "days"
         entity_category: diagnostic
       offset: 3
-      xor: 14
-    - name: clearray_life_remaining
-      home_assistant:
-        name: Clearray Life Remaining
-        icon: mdi:lightbulb-cfl
-        unit_of_measurement: "days"
-        entity_category: diagnostic
-      offset: 13
+      xor: 0xFF
+#    - name: clearray_life_remaining
+#      home_assistant:
+#        name: Clearray Life Remaining
+#        icon: mdi:lightbulb-cfl
+#        unit_of_measurement: "days"
+#        entity_category: diagnostic
+#      offset: 13

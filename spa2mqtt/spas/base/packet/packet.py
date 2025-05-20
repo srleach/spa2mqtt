@@ -23,6 +23,7 @@ class Packet:
     checksum: int
     payload: bytes
     body: bytes
+    cs_pass: bool = False
 
     @property
     def data(self) -> list[int]:
@@ -40,9 +41,11 @@ class Packet:
         return (f"<Packet"
                 f" {label_str}"
                 f" ch=0x{self.channel:02x}"
+                f" ch=0x{self.channel:02x}"
                 f" len={self.len}"
                 f" mid=0x{self.mid:02x}"
                 f" checksum={self.checksum:02x}"
+                f" valid={self.cs_pass}"
                 f" type=0x{self.packet_type:02x}"
                 f" body={self.body.hex()}>"
                 f" raw={self.raw.hex()}"
@@ -71,10 +74,16 @@ class Packet:
 
         body = raw[5:-2]
 
-        return cls(raw=raw, channel=channel, mid=mid, packet_type=packet_type, payload=raw, len=length,
-                   checksum=checksum, body=body)
+        cs = cls.calculate_checksum(raw[1:-2])
 
-    def balboa_calc_cs(self, data, length):
+        if cs != checksum:
+            raise ValueError(f"Checksum mismatch: Indicated[{checksum}] / Calculated[{cs}]")
+
+        return cls(raw=raw, channel=channel, mid=mid, packet_type=packet_type, payload=raw, len=length,
+                   checksum=checksum, body=body, cs_pass=True)
+
+    @classmethod
+    def calculate_checksum(self, data):
         """
         Calculate the checksum byte for a balboa message
         --
@@ -94,17 +103,18 @@ class Packet:
          *    Algorithm     = bit-by-bit
         https://github.com/garbled1/gnhast/blob/master/balboacoll/collector.c
         """
-        crc = 0xb5
-        for cur in range(length):
+
+        crc = 0xB5
+        for _, cur in enumerate(data):
             for i in range(8):
                 bit = crc & 0x80
-                crc = ((crc << 1) & 0xff) | ((data[cur] >> (7 - i)) & 0x01)
-                if (bit):
+                crc = ((crc << 1) & 0xFF) | ((cur >> (7 - i)) & 0x01)
+                if bit:
                     crc = crc ^ 0x07
-            crc &= 0xff
+            crc &= 0xFF
         for i in range(8):
             bit = crc & 0x80
-            crc = (crc << 1) & 0xff
+            crc = (crc << 1) & 0xFF
             if bit:
                 crc ^= 0x07
         return crc ^ 0x02

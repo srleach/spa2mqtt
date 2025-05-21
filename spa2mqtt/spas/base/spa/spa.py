@@ -1,4 +1,5 @@
 import csv
+from collections import deque
 from datetime import datetime
 from typing import List
 
@@ -15,8 +16,13 @@ class Spa:
 
     packets_written: int = 0
 
-    send_buffer: List[Packet] = []
+    send_buffer: deque[Packet] = deque()
+    channel_confidence: int = 0
+    channels_seen: List[int] = []
     channel: int = None
+    channel_requested = False
+
+    CHANNEL_EMPTY_CONFIDENCE_THRESHOLD: int = 5
 
     def __init__(self, model: str, serial_number: str, communicator_send_cb,
                  message_configuration: dict = {}, mqtt=None, debug: bool = False):

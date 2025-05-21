@@ -1,4 +1,5 @@
 # --- Base Packet class ---
+import sys
 from dataclasses import dataclass
 from typing import Optional, TypeVar
 
@@ -24,6 +25,8 @@ class Packet:
     payload: bytes
     body: bytes
     cs_pass: bool = False
+
+    PACKET_DELIMITER: bytes = 0x7e
 
     @property
     def data(self) -> list[int]:
@@ -55,7 +58,7 @@ class Packet:
 
     @classmethod
     def from_raw(cls, raw: bytes) -> "T":
-        if raw[0] != 0x7e or raw[-1] != 0x7e:
+        if raw[0] != cls.PACKET_DELIMITER or raw[-1] != cls.PACKET_DELIMITER:
             raise ValueError("Invalid framing")
 
         length = raw[1]
@@ -80,6 +83,7 @@ class Packet:
 
         return cls(raw=raw, channel=channel, mid=mid, packet_type=packet_type, payload=raw, len=length,
                    checksum=checksum, body=body, cs_pass=True)
+
 
     @classmethod
     def calculate_checksum(self, data):

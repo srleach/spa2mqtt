@@ -1,5 +1,6 @@
 import csv
 from datetime import datetime
+from typing import List
 
 from spa2mqtt.spas.base.messages.message_factory import JacuzziUnencryptedMessageFactory
 from spa2mqtt.spas.base.packet import Packet
@@ -14,6 +15,9 @@ class Spa:
 
     packets_written: int = 0
 
+    send_buffer: List[Packet] = []
+    channel: int = None
+
     def __init__(self, model: str, serial_number: str, communicator_send_cb,
                  message_configuration: dict = {}, mqtt=None, debug: bool = False):
 
@@ -23,7 +27,8 @@ class Spa:
         self.message_configuration = message_configuration
         self.model_name = model
         self.communicator_send_cb = communicator_send_cb
-        
+
+
 
         if self.debug:
             filename = datetime.now().strftime("%Y%m%d-%H%M%S")

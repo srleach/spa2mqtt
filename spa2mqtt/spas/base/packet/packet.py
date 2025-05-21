@@ -37,8 +37,8 @@ class Packet:
 
     def __repr__(self):
         label = self.as_enum()
-        label_str = label.name if label else f"UNKNOWN_{self.packet_type:02X}"
-        return (f"<Packet"
+        label_str = label.name if label is not None else f"UNKNOWN_{self.packet_type:02X}"
+        return (f"<{self.__class__.__name__}"
                 f" {label_str}"
                 f" ch=0x{self.channel:02x}"
                 f" len={self.len}"

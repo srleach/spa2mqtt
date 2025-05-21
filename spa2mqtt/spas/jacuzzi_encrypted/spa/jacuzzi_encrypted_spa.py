@@ -49,18 +49,21 @@ class JacuzziEncryptedSpa(Spa):
                 if DEBUG_MODE:
                     self.writer.writerow(pkt.data)
 
-                # self.mqtt.handle_sensor_updates(message=message)
+                self.mqtt.handle_sensor_updates(message=message)
                 pass
             case JacuzziEncryptedPacketType.LIGHTS_UPDATE | JacuzziEncryptedPacketType.LIGHTS_UPDATE_ALT_23:
                 pass
-            case JacuzziEncryptedPacketType.CLEAR_TO_SEND:
+            case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
+                print(pkt)
                 # In here we'll have to negotiate a channel.
-                self.communicator_send_cb()
+                # Maybe not, we'll do that at connect time.
+                # We will need to craft a packet to send, though.
+                # self.communicator_send_cb()
                 pass
             case JacuzziEncryptedPacketType.CC_REQ | JacuzziEncryptedPacketType.CC_REQ_ALT_17:
                 pass
             case _:
-                print(pkt)
+                # print(pkt)
                 pass
 
         # Here's the place to deviate behaviour if we want to selectively process certain packet types. I suppose

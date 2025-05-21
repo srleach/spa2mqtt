@@ -37,6 +37,16 @@ message_configuration:
       offset: 1
       shift: 6
       mask: 1
+    - name: clearray_status
+      binary_sensor: True
+      home_assistant:
+        name: Clearray Status
+        icon: mdi:lightbulb-cfl
+        entity_category: diagnostic
+        device_class: running
+      offset: 7
+      shift: 6
+      mask: 0xc0
     - name: main_pump_status
       binary_sensor: True
       home_assistant:

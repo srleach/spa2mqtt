@@ -32,10 +32,26 @@ class JacuzziEncryptedPacket(Packet):
         for i in range(0, len(data) - 1, 2):
             decoded.append(data[i] ^ data[i + 1] ^ 0x01)
         return decoded
+    #
+    # def __init__(self, raw: bytes):
+    #     pkt = Packet.from_raw(raw)
+    #     super().__init__(**pkt.__dict__)
 
-    def __init__(self, raw: bytes):
-        pkt = Packet.from_raw(raw)
-        super().__init__(**pkt.__dict__)
+
+    @classmethod
+    def construct_with_params(cls, channel: int, mid: int, packet_type: int, body: bytearray):
+        packet_data = bytearray()
+
+        packet_data.append(cls.PACKET_DELIMITER)
+        packet_data.append(len(body) + 5)
+        packet_data.append(channel)
+        packet_data.append(mid)
+        packet_data.append(packet_type)
+        packet_data.extend(body)
+        packet_data.append(cls.calculate_checksum(packet_data[1:]))
+        packet_data.append(cls.PACKET_DELIMITER)
+
+        return cls.from_raw(packet_data)
 
     @property
     def data(self) -> list[int]:

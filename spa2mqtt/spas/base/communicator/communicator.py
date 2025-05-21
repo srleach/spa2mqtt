@@ -4,6 +4,8 @@ import logging
 import sys
 from typing import Callable
 
+from spa2mqtt.spas.base.packet import packet
+
 
 class Communicator:
     """
@@ -47,6 +49,8 @@ class Communicator:
             self.reader, self.writer = await asyncio.open_connection(
                 self.spa_address, self.spa_port
             )
+
+            print("Let's grab a channel")
 
             self.last_packet = datetime.datetime.now()
             self.logger.info("Connected to spa.")
@@ -176,6 +180,7 @@ class Communicator:
 
                 continue
 
-    def send_message_cb(self):
+    def send_message_cb(self, Packet: packet):
+        print(packet)
         # print("Sending Message Stub", self.last_packet)
         pass

@@ -19,6 +19,9 @@ class Message():
         self.message_configuration = message_configuration
         self.pkt = pkt
 
+    def parse(self):
+        return self.decode_params(self.message_configuration)
+
     def decode_params(self, schema: list[dict]) -> dict:
         result = {}
         for entry in schema:

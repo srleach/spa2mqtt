@@ -1,5 +1,9 @@
+import csv
+from collections import deque
 from datetime import datetime
+from typing import List
 
+from spa2mqtt.spas.base.messages.message_factory import JacuzziUnencryptedMessageFactory
 from spa2mqtt.spas.base.packet import Packet
 from spa2mqtt.spas.base.packet_types import PacketType
 
@@ -8,12 +12,34 @@ class Spa:
     model_name: str
     message_configuration: dict
     serial_number: str
+    debug: bool = False
 
-    def __init__(self, model: str, serial_number: str, message_configuration: dict = {}, mqtt = None):
+    packets_written: int = 0
+
+    send_buffer: deque[Packet] = deque()
+    channel_confidence: int = 0
+    channels_seen: List[int] = []
+    channel: int = None
+    channel_requested = False
+
+    CHANNEL_EMPTY_CONFIDENCE_THRESHOLD: int = 5
+
+    def __init__(self, model: str, serial_number: str, communicator_send_cb,
+                 message_configuration: dict = {}, mqtt=None, debug: bool = False):
+
+        self.debug = debug
         self.mqtt = mqtt
         self.serial_number = serial_number
         self.message_configuration = message_configuration
         self.model_name = model
+        self.communicator_send_cb = communicator_send_cb
+
+
+
+        if self.debug:
+            filename = datetime.now().strftime("%Y%m%d-%H%M%S")
+            self.debug_file = open(f"debug_{filename}.csv", "a", newline="")
+            self.writer = csv.writer(self.debug_file)
 
     def process_update(self, timestamp: datetime, message: bytes):
         """
@@ -24,26 +50,26 @@ class Spa:
         :param message:
         :return:
         """
-        pkt = Packet(message)
+        pkt = Packet.from_raw(message)
+        message = JacuzziUnencryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
 
         match pkt.as_enum():
-            case PacketType.STATUS_UPDATE | PacketType.STATUS_UPDATE_ALT_16:
-                pass
-            case PacketType.CLIENT_CLEAR_TO_SEND:
-                pass
-            case PacketType.LIGHTS_UPDATE | PacketType.LIGHTS_UPDATE_ALT_23:
-                pass
-            case PacketType.CLEAR_TO_SEND:
-                pass
-            case PacketType.CC_REQ | PacketType.CC_REQ_ALT_17:
+            case PacketType.FILTER_CYCLE:
+                print(pkt)
+                self.mqtt.handle_sensor_updates(message=message)
+            case PacketType.NOT_DISCOVERED_16 | PacketType.NOT_DISCOVERED_23:
                 pass
             case _:
-                print("Spa emitted an unrecognised message")
                 print(pkt)
+                pass
 
-        # Here's the place to deviate behaviour if we want to selectively process certain packet types. I suppose
-        # We should think about implementing a channelising mechansim.
-        # print(pkt)
-        # <Packet STATUS_UPDATE ch=0x0a mid=0xbf type=0xc4 payload=...>
+        # The only deviation from the encrypted packet we need to take is to assert we're paying attention to the MID,
+        # Channel and Type - and the type. Our type interpolation on the PacketType enum may not be bang on.
+
+        if self.debug:
+            self.writer.writerow([timestamp, message.hex()])
+            print(f"{timestamp}_: {message.hex()}")
+            self.packets_written += 1
+            self.debug_file.flush()
 
         return True

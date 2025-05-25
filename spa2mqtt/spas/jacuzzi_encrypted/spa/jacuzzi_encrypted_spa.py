@@ -10,22 +10,24 @@ from spa2mqtt.spas.jacuzzi_encrypted.packet import JacuzziEncryptedPacket
 
 # our messages expose the factory and base message entities to us
 from spa2mqtt.spas.jacuzzi_encrypted.messages.JacuzziEncryptedMessage import *
+from spa2mqtt.spas.jacuzzi_encrypted.packet_types import JacuzziTopsideControllerButton
 
 DEBUG_MODE = False
 
-class JacuzziEncryptedSpa(Spa):
 
-    last_outbound = 0;
+class JacuzziEncryptedSpa(Spa):
+    last_outbound = 0
+    channels_active = []
 
     def __init__(self, model: str, serial_number: str, communicator_send_cb,
                  message_configuration: dict = {}, mqtt=None, debug: bool = False):
 
-        super().__init__(model=model, serial_number=serial_number, message_configuration=message_configuration, mqtt=mqtt, communicator_send_cb=communicator_send_cb)
+        super().__init__(model=model, serial_number=serial_number, message_configuration=message_configuration,
+                         mqtt=mqtt, communicator_send_cb=communicator_send_cb)
 
         self.debug = debug
         self.communicator_send_cb = communicator_send_cb
         self.message_configuration = message_configuration
-
 
         if self.debug:
             print("Debug mode is on")
@@ -34,6 +36,20 @@ class JacuzziEncryptedSpa(Spa):
 
     def queue_packet(self, packet: JacuzziEncryptedPacket):
         self.send_buffer.append(packet)
+
+    def claim_channel_when_ready(self, packet: JacuzziEncryptedPacket):
+        if packet.channel not in self.channels_active:
+            self.channels_active.append(packet.channel)
+
+        self.channel_confidence += 1
+
+        if self.channel_confidence >= self.CHANNEL_EMPTY_CONFIDENCE_THRESHOLD and not self.channel_requested:
+            # await self.request_channel()
+            self.channel_requested = True
+            self.channel = next((x for x in sorted(self.channels_seen) if x not in set(self.channels_active)), None)
+            print(f"Got Channel: {self.channel}")
+
+        return True
 
     async def can_send(self, packet: JacuzziEncryptedPacket):
         """
@@ -49,26 +65,22 @@ class JacuzziEncryptedSpa(Spa):
         if packet.channel not in self.channels_seen:
             self.channels_seen.append(packet.channel)
 
-        # print(self.channels_seen, self.channel, packet.channel)
-
         if packet.channel == self.channel:
             return True
-
-        # Detect Conflict...?
-
-        # Detect if this CTS is ours?
-
-        self.channel_confidence += 1
-
-        if self.channel_confidence >= self.CHANNEL_EMPTY_CONFIDENCE_THRESHOLD and not self.channel_requested:
-            await self.request_channel()
-            self.channel_requested = True
 
         return False
 
     async def request_channel(self):
+        """
+        We don't actually need to call this if there's a seemingly dormant channel already seen with no activity - we'll
+        just claim that instead.
+        :return:
+        """
         data = bytearray([0xF1, 0x73])
-        channel_request_packet = JacuzziEncryptedPacket.construct_with_params(mid=0xFE, channel=0xBF, packet_type=0x01, body=data)
+        channel_request_packet = JacuzziEncryptedPacket.construct_with_params(mid=0xFE, channel=0xBF, packet_type=0x01,
+                                                                              body=data)
+
+        # We want to emit this directly, without queuing in this circumstance
         await self.communicator_send_cb(channel_request_packet.raw)
 
     async def ack_channel(self, channel: int):
@@ -79,6 +91,8 @@ class JacuzziEncryptedSpa(Spa):
             packet_type=JacuzziEncryptedPacketType.CHANNEL_ASSIGNMENT_ACK,
             body=data
         )
+
+        # We want to emit this directly, without queuing in this circumstance
         await self.communicator_send_cb(channel_ack_packet.raw)
 
         self.channel = channel
@@ -94,10 +108,7 @@ class JacuzziEncryptedSpa(Spa):
 
         packet = self.send_buffer.popleft()
 
-        print("Packet:")
-        print(packet)
         await self.communicator_send_cb(packet.raw)
-
 
     def queue_button_command(self, button: int):
         """
@@ -105,6 +116,7 @@ class JacuzziEncryptedSpa(Spa):
         :param button:
         :return:
         """
+        print(f"Attempting to send button command {button}")
         data = bytearray([button, 0])
         btn_packet = JacuzziEncryptedPacket.construct_with_params(
             mid=0xBF,
@@ -114,7 +126,6 @@ class JacuzziEncryptedSpa(Spa):
         )
 
         self.queue_packet(btn_packet)
-
 
     async def process_update(self, timestamp: datetime, payload: bytes):
         """
@@ -130,12 +141,13 @@ class JacuzziEncryptedSpa(Spa):
         pkt = JacuzziEncryptedPacket.from_raw(payload)
         message = JacuzziEncryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
 
-        ts = datetime.now().timestamp()
-
-        if ts - self.last_outbound > 5:
-            self.last_outbound = ts
-            if self.channel is not None:
-                self.queue_button_command(229)
+        # if False:
+        #     ts = datetime.now().timestamp()
+        #
+        #     if ts - self.last_outbound > 1:
+        #         self.last_outbound = ts
+        #         if self.channel is not None:
+        #             self.queue_button_command(JacuzziTopsideControllerButton.BTN_TEMP_UP)
 
         match pkt.as_enum():
 
@@ -154,13 +166,26 @@ class JacuzziEncryptedSpa(Spa):
 
                 if can_send:
                     await self.send_queued_message()
+                pass
             case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
                 pass
             case JacuzziEncryptedPacketType.CC_REQ | JacuzziEncryptedPacketType.CC_REQ_ALT_17:
+                """
+                We've received a message from another device in the bus. This is intended for the board, but we may 
+                wish to carry out some actions as a result.
+                
+                We'll use this message to build a representation of devices on the network in order to claim a channel,
+                while reusing a dormant one if available.
+                """
+                self.claim_channel_when_ready(pkt)
+
                 pass
             case JacuzziEncryptedPacketType.CHANNEL_ASSIGNMENT_RESPONSE:
                 # Let's not magic number this.
-                await self.ack_channel(pkt.get_field(0))
+                # Also I've just realised that we'll ack the Chan response to any device on the bus with this.
+                # Should probably be selective.
+                print("WARNING: Received CHAN ASSIGNMENT response, this is currently skipped.")
+                # await self.ack_channel(pkt.get_field(0))
             case _:
                 # print(pkt)
                 pass
@@ -171,4 +196,3 @@ class JacuzziEncryptedSpa(Spa):
         # <Packet STATUS_UPDATE ch=0x0a mid=0xbf type=0xc4 payload=...>
 
         return True
-

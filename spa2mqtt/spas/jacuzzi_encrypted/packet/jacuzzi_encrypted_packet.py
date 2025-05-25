@@ -1,3 +1,4 @@
+from enum import IntEnum
 from typing import Optional
 
 from spa2mqtt.spas.base.packet import Packet
@@ -60,3 +61,4 @@ class JacuzziEncryptedPacket(Packet):
             return self.xormsg(self.body)
 
         return list(self.body)
+

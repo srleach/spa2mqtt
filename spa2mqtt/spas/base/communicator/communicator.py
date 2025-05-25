@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 import sys
+import socket
 from typing import Callable
 
 from spa2mqtt.spas.base.packet import packet
@@ -49,6 +50,10 @@ class Communicator:
             self.reader, self.writer = await asyncio.open_connection(
                 self.spa_address, self.spa_port
             )
+
+            # Unsure if this is required
+            # sock = self.writer.transport.get_extra_info('socket')
+            # sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
             self.last_packet = datetime.datetime.now()
             self.logger.info("Connected to spa.")
@@ -179,6 +184,7 @@ class Communicator:
                 continue
 
     async def send_message_cb(self, raw_content: bytes):
+        print(f"Writing {raw_content.hex()}")
         self.writer.write(raw_content)
         await self.writer.drain()
 

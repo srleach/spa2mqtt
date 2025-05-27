@@ -1,7 +1,6 @@
 import importlib
 import logging
 
-
 from spa2mqtt.spas.base.communicator import Communicator
 
 logger = logging.getLogger(__name__)
@@ -18,3 +17,15 @@ def make_tub(family: str, spa_variant: str, args):  # TODO: Hint Return Type...
 
 def make_communicator(family: str, communicator: str, args) -> Communicator:
     return load_class(f"spa2mqtt.spas.{family}.communicator", communicator)(**args)
+
+
+def get_communicator(spa_configuration: dict, variant_configuration: dict) -> Communicator:
+    """
+    Build the communicator for SPAs.
+    :return:
+    """
+    return make_communicator(
+        variant_configuration.get('family'),
+        variant_configuration.get('communicator'),
+        spa_configuration.get('connection')
+    )

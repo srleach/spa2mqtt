@@ -14,7 +14,7 @@ class JacuzziStatusMessage(Message):
 @JacuzziEncryptedMessageFactory.register(JacuzziEncryptedPacketType.LIGHTS_UPDATE)
 class JacuzziLightsMessage(Message):
     def parse(self):
-        print("Parsing lights message")
-        print(self.pkt.data)
+        # print("Parsing lights message")
+        # print(self.pkt.data)
         # logic here
         pass

@@ -24,7 +24,13 @@ class Message():
 
     def decode_params(self, schema: list[dict]) -> dict:
         result = {}
+        # print("--")
         for entry in schema:
+
+            if "offset" not in entry:
+                # Assume we're dealing with a non-updating type. Probs switch this to be more explicity on the enum.
+                continue
+
             name = entry["name"]
             offset = entry["offset"]
             length = entry.get("length", 1)
@@ -37,7 +43,7 @@ class Message():
             if "xor" in entry:
                 value ^= entry["xor"]
             if "shift" in entry:
-                value = value << entry["shift"] if entry["shift"] > 0 else value >> abs(entry["shift"])
+                value = value >> entry["shift"] if entry["shift"] > 0 else value << abs(entry["shift"])
             if "mask" in entry:
                 value &= entry["mask"]
             if "scale" in entry:
@@ -52,5 +58,6 @@ class Message():
                     raise Exception(f"Unknown value mapping for [{value}] in output map ", entry["output_map"])
 
             result[name] = value
+
         return result
 

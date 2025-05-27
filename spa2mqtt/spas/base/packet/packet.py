@@ -1,4 +1,5 @@
 # --- Base Packet class ---
+import sys
 from dataclasses import dataclass
 from typing import Optional, TypeVar
 
@@ -23,6 +24,9 @@ class Packet:
     checksum: int
     payload: bytes
     body: bytes
+    cs_pass: bool = False
+
+    PACKET_DELIMITER: bytes = 0x7e
 
     @property
     def data(self) -> list[int]:
@@ -36,15 +40,16 @@ class Packet:
 
     def __repr__(self):
         label = self.as_enum()
-        label_str = label.name if label else f"UNKNOWN_{self.packet_type:02X}"
-        return (f"<Packet"
+        label_str = label.name if label is not None else f"UNKNOWN_{self.packet_type:02X}"
+        return (f"<{self.__class__.__name__}"
                 f" {label_str}"
                 f" ch=0x{self.channel:02x}"
                 f" len={self.len}"
                 f" mid=0x{self.mid:02x}"
                 f" checksum={self.checksum:02x}"
+                f" valid={self.cs_pass}"
                 f" type=0x{self.packet_type:02x}"
-                f" body={self.body.hex()}>"
+                f" body={self.body.hex() or None}"
                 f" raw={self.raw.hex()}"
                 f">")
 
@@ -53,7 +58,7 @@ class Packet:
 
     @classmethod
     def from_raw(cls, raw: bytes) -> "T":
-        if raw[0] != 0x7e or raw[-1] != 0x7e:
+        if raw[0] != cls.PACKET_DELIMITER or raw[-1] != cls.PACKET_DELIMITER:
             raise ValueError("Invalid framing")
 
         length = raw[1]
@@ -71,10 +76,17 @@ class Packet:
 
         body = raw[5:-2]
 
-        return cls(raw=raw, channel=channel, mid=mid, packet_type=packet_type, payload=raw, len=length,
-                   checksum=checksum, body=body)
+        cs = cls.calculate_checksum(raw[1:-2])
 
-    def balboa_calc_cs(self, data, length):
+        if cs != checksum:
+            raise ValueError(f"Checksum mismatch: Indicated[{checksum}] / Calculated[{cs}]")
+
+        return cls(raw=raw, channel=channel, mid=mid, packet_type=packet_type, payload=raw, len=length,
+                   checksum=checksum, body=body, cs_pass=True)
+
+
+    @classmethod
+    def calculate_checksum(self, data):
         """
         Calculate the checksum byte for a balboa message
         --
@@ -94,17 +106,18 @@ class Packet:
          *    Algorithm     = bit-by-bit
         https://github.com/garbled1/gnhast/blob/master/balboacoll/collector.c
         """
-        crc = 0xb5
-        for cur in range(length):
+
+        crc = 0xB5
+        for _, cur in enumerate(data):
             for i in range(8):
                 bit = crc & 0x80
-                crc = ((crc << 1) & 0xff) | ((data[cur] >> (7 - i)) & 0x01)
-                if (bit):
+                crc = ((crc << 1) & 0xFF) | ((cur >> (7 - i)) & 0x01)
+                if bit:
                     crc = crc ^ 0x07
-            crc &= 0xff
+            crc &= 0xFF
         for i in range(8):
             bit = crc & 0x80
-            crc = (crc << 1) & 0xff
+            crc = (crc << 1) & 0xFF
             if bit:
                 crc ^= 0x07
         return crc ^ 0x02

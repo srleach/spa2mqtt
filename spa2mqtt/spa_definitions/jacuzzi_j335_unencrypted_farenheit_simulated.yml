@@ -1,0 +1,26 @@
+family: base
+communicator: SimulatedCommunicator
+debug: False
+spa: Spa
+model_name: Jacuzzi J335
+serial_number: Not Set
+sensor_update_intervals:
+  default: 60
+#  overrides:
+#    "setpoint_temperature": 1.0
+message_configuration:
+  0x23:
+    - name: fc1_time
+      home_assistant:
+        name: Filter Cycle 1 Time
+        icon: mdi:coolant-temperature
+        device_class: number
+      offset: 0
+      length: 2
+    - name: fc1_dur
+      home_assistant:
+        name: Filter Cycle 1 Duration
+        icon: mdi:coolant-temperature
+        device_class: number
+      offset: 2
+      length: 2

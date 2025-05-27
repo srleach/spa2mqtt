@@ -5,9 +5,9 @@ model_name: Jacuzzi J235
 serial_number: Not Set
 sensor_update_intervals:
   default: 60
-  # You can include the below block to override the interval for individual sensors.
-#  overrides:
-#    "setpoint_temperature": 1.0
+  overrides:
+    secondary_pump_status: 90
+    circulation_pump_status: 90
 message_configuration:
   0xc4:
     - name: current_temperature
@@ -29,7 +29,7 @@ message_configuration:
       offset: 8
       scale: 0.5 # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
     - name: circulation_pump_status
-      binary_sensor: True
+      type: binary_sensor
       home_assistant:
         name: Circulation Pump Status
         icon: mdi:water-pump
@@ -38,56 +38,45 @@ message_configuration:
       offset: 1
       shift: 6
       mask: 1
-    - name: main_pump_status
-      binary_sensor: True
+#
+
+
+#    - name: clearray_status
+#      type: binary_sensor
+#      home_assistant:
+#        name: Clearray Status
+#        icon: mdi:lightbulb-cfl
+#        entity_category: diagnostic
+#        device_class: running
+#      offset: 7
+#      shift: 6
+#      mask: 0xc0
+
+#
+    - name: secondary_pump_status
+      type: binary_sensor
       home_assistant:
-        name: Main Pump Status
+        name: Secondary Pump Status
         icon: mdi:water-pump
         entity_category: diagnostic
         device_class: running
       offset: 1
       shift: 2
       mask: 1 # This is possibly not necessary in this particular operation
-    - name: secondary_pump_status
-      binary_sensor: True
+#
+#
+    - name: main_pump_status
+      type: binary_sensor
       home_assistant:
-        name: Secondary Pump Status
+        name: Main Pump Status
         icon: mdi:water-pump
         entity_category: diagnostic
         device_class: running
       offset: 2
       shift: 4
-      mask: 1 # This is possibly not necessary in this particular operation
-    - name: manual_circulation_call
-      binary_sensor: True
-      home_assistant:
-        name: Manual Circulation Call
-        icon: mdi:water-pump
-        entity_category: diagnostic
-        device_class: running
-      offset: 1
-      shift: 7
-      mask: 1 # This is possibly not necessary in this particular operation
-    - name: heater_active
-      binary_sensor: True
-      home_assistant:
-        name: Heater Active
-        icon: mdi:radiator
-        entity_category: diagnostic
-        device_class: heat
-      offset: 10
-      shift: 6
-      mask: 1 # This is possibly not necessary in this particular operation
-    - name: clearray_active
-      binary_sensor: True
-      home_assistant:
-        name: ClearRay Active
-        icon: mdi:lightbulb-cfl
-        entity_category: diagnostic
-        device_class: light
-      offset: 5
-      shift: 6
-      mask: 1 # This is possibly not necessary in this particular operation
+      mask: 1
+
+
 #    - name: water_life_remaining
 #      home_assistant:
 #        name: Water Life Remaining
@@ -96,14 +85,14 @@ message_configuration:
 #        entity_category: diagnostic
 #      offset: 12
 #      length: 1
-    - name: clearray_life_remaining
-      home_assistant:
-        name: Clearray Life Remaining
-        icon: mdi:filter-check
-        unit_of_measurement: "days"
-        entity_category: diagnostic
-      offset: 3
-      xor: 0xFF
+#    - name: filter_life_remaining
+#      home_assistant:
+#        name: Filter Life Remaining
+#        icon: mdi:filter-check
+#        unit_of_measurement: "days"
+#        entity_category: diagnostic
+#      offset: 3
+#      xor: 14
 #    - name: clearray_life_remaining
 #      home_assistant:
 #        name: Clearray Life Remaining
@@ -111,3 +100,48 @@ message_configuration:
 #        unit_of_measurement: "days"
 #        entity_category: diagnostic
 #      offset: 13
+    - name: temperature_increment
+      type: button
+      home_assistant:
+        name: Temperature Increment
+      action:
+        method: queue_button_command
+        args:
+          button: 225
+    - name: temperature_decrement
+      type: button
+      home_assistant:
+        name: Temperature Decrement
+      action:
+        method: queue_button_command
+        args:
+          button: 226
+    - name: pump_1_button
+      type: button
+      home_assistant:
+        name: Pump 1 Button
+      action:
+        method: queue_button_command
+        args:
+          button: 228
+    - name: pump_2_button
+      type: button
+      home_assistant:
+        name: Pump 2 Button
+      action:
+        method: queue_button_command
+        args:
+          button: 229
+    - name: temperature_set_control
+      type: number
+      home_assistant:
+        name: Temperature Set Control
+        min: 20
+        max: 40
+        step: 0.5
+        mode: slider
+      action:
+        method: set_command_temperature
+      value:
+        from: setpoint_temperature
+        stability_period: 3

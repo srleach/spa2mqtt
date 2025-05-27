@@ -2,7 +2,10 @@ import asyncio
 import datetime
 import logging
 import sys
+import socket
 from typing import Callable
+
+from spa2mqtt.spas.base.packet import packet
 
 
 class Communicator:
@@ -47,6 +50,10 @@ class Communicator:
             self.reader, self.writer = await asyncio.open_connection(
                 self.spa_address, self.spa_port
             )
+
+            # Unsure if this is required
+            # sock = self.writer.transport.get_extra_info('socket')
+            # sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
             self.last_packet = datetime.datetime.now()
             self.logger.info("Connected to spa.")
@@ -164,7 +171,7 @@ class Communicator:
                 full_packet = bytes([self.packet_marker, length_byte]) + payload + bytes([self.packet_marker])
 
                 # Invoke the callback passed from the spa entity.
-                self.process_update(full_packet)
+                await self.process_update(full_packet)
                 self.last_packet = datetime.datetime.now()
 
             except Exception as e:
@@ -176,6 +183,9 @@ class Communicator:
 
                 continue
 
-    def send_message_cb(self):
-        # print("Sending Message Stub", self.last_packet)
-        pass
+    async def send_message_cb(self, raw_content: bytes):
+        print(f"Writing {raw_content.hex()}")
+        self.writer.write(raw_content)
+        await self.writer.drain()
+
+        return True

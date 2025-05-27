@@ -1,16 +1,14 @@
 import asyncio
 import datetime
 import logging
-import sys
-import socket
 from typing import Callable
-
-from spa2mqtt.spas.base.packet import packet
 
 
 class Communicator:
     """
     Communicator to handle interaction with the spa.
+
+    TODO: Extract some of the comms related stuff here into a util to keep the communicator clean
     """
     reader: asyncio.StreamReader = None
     writer: asyncio.StreamWriter = None
@@ -60,7 +58,7 @@ class Communicator:
             return True
 
         except (asyncio.TimeoutError, ConnectionRefusedError):
-            self.logger.error("Failed to establish connection to spa.")
+            self.logger.error("Failed to establish connection to spa - timed out or connection rejected")
             return False
         except Exception as e:
             self.logger.error("Failed to establish connection to spa: ", str(e))
@@ -148,14 +146,13 @@ class Communicator:
                 # Get a valid start marker and length byte
                 start, length_byte = await self._read_valid_start()
                 if start is None:
-                    print("EOF or connection lost.")
+                    self.logger.error("EOF or connection lost.")
                     return
 
                 if length_byte == 0 or length_byte > max_payload_length:
                     continue
 
                 try:
-                    # TODO: Verify this - we've removed the appended length field
                     full_data = await self._read_exactly(length_byte, timeout=5)
                 except ValueError as e:
                     raise e
@@ -184,7 +181,7 @@ class Communicator:
                 continue
 
     async def send_message_cb(self, raw_content: bytes):
-        print(f"Writing {raw_content.hex()}")
+        self.logger.debug(f"Writing packet onto stream [{raw_content.hex()}]")
         self.writer.write(raw_content)
         await self.writer.drain()
 

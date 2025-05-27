@@ -35,6 +35,7 @@ async def main():
 
     spa = make_tub(tub_config.get('family'), tub_config.get('spa'), configuration)
 
+    mqtt.attach_spa(spa)
 
     await communicator.listen(spa.process_update)
 

@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import sys
 from datetime import datetime
 from enum import Enum
 from logging import Logger

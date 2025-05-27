@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import sys
 from typing import Callable
 
 
@@ -14,7 +15,7 @@ class Communicator:
     writer: asyncio.StreamWriter = None
     last_packet: datetime.datetime = None
     logger: logging.Logger = None
-    break_on_exception = False
+    break_on_exception = True
 
     # Persist our callbacks
     spa_process_update_cb: Callable[[datetime.datetime, bytes], bool]

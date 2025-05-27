@@ -182,8 +182,6 @@ class JacuzziEncryptedSpa(Spa):
                 self.logger.debug(f"Received a message using an unhandled packet type {pkt.as_enum()}.")
                 pass
 
-        return True
-
     async def do_command_loop(self, message: Message):
         # This is temporarily only concerned with temp. We may want to change this for declarative control of pumps.
 

@@ -38,7 +38,8 @@ async def main():
         get_spa_configuration(communicator, debug_spa, mqtt, spa_configuration, tub_config)
     )
 
-    mqtt.attach_spa(spa)
+    if not debug_spa:
+        mqtt.attach_spa(spa)
 
     await communicator.listen(spa.process_update)
 

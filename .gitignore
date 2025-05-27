@@ -175,3 +175,4 @@ cython_debug/
 
 # Ignore a config.yml if present
 config.yml
+*-debug_messages.csv

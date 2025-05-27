@@ -37,7 +37,7 @@ class MQTTControl:
         self.mqtt_settings = Settings.MQTT(host=broker_host, port=broker_port)
         self.device_name = device
         self.device_id = device_id
-        self.logger = logger or logging.getLogger(self.device_name)
+        self.logger = logger or logging.getLogger(f"{self.device_name}_MQTT")
         self.default_interval = sensor_update_intervals.get('default', 15)
         self.interval_overrides = sensor_update_intervals.get('overrides', {})
 
@@ -58,20 +58,12 @@ class MQTTControl:
             raise Exception('No spa has been attached.')
 
         method_name = userdata['method']
-
         method = getattr(self.spa, method_name)
-
-        # print(method)
         asyncio.run(method(**userdata['args']))
 
     def number_callback(self, client, userdata, message):
-        print(userdata, )
-
         method_name = userdata['method']
-
         method = getattr(self.spa, method_name)
-
-        # print(method)
         asyncio.run(method(message.payload.decode()))
 
     def light_callback(self, client: Client, user_data, message: MQTTMessage):
@@ -81,6 +73,7 @@ class MQTTControl:
         if entity_key in self.entities:
             sensor = self.entities[entity_key]
         else:
+            self.logger.debug(f"Creating entity {entity_key}")
             params = {**sensor_config, **{'device': self.get_device_info()}, 'unique_id': entity_key}
             sensor_info = BinarySensorInfo(**params) if as_binary else SensorInfo(**params)
             settings = Settings(mqtt=self.mqtt_settings, entity=sensor_info)
@@ -95,7 +88,6 @@ class MQTTControl:
         else:
             sensor.set_state(value)
 
-        print(entity_key, value)
         self.sensor_updated_at[entity_key] = datetime.now().timestamp()
         self.last_values[entity_key] = value
         self.last_changed[entity_key] = datetime.now()
@@ -107,6 +99,7 @@ class MQTTControl:
             number = self.entities[entity_key]
             refresh = True
         else:
+            self.logger.debug(f"Creating entity {entity_key}")
             params = {**number_config, **{'device': self.get_device_info()}, 'unique_id': entity_key}
             number_info = NumberInfo(**params)
             settings = Settings(mqtt=self.mqtt_settings, entity=number_info)
@@ -139,6 +132,7 @@ class MQTTControl:
     def button(self, entity_key: str, button_config: dict, action_config: dict):
         if entity_key in self.entities:
             return
+        self.logger.debug(f"Creating entity {entity_key}")
         params = {**button_config, **{'device': self.get_device_info()}, 'unique_id': entity_key}
         button_info = ButtonInfo(**params)
         settings = Settings(mqtt=self.mqtt_settings, entity=button_info)
@@ -147,19 +141,9 @@ class MQTTControl:
         button.write_config()
         self.entities[entity_key] = button
 
-        # # Define an optional object to be passed back to the callback
-        # user_data = "Some custom data"
-        #
-        # # Instantiate the button
-        # my_button = Button(settings, my_callback, user_data)
-        #
-        # # Publish the button's discoverability message to let HA automatically notice it
-        # my_button.write_config()
-
     def sensor_can_update(self, sensor_id, value):
         if sensor_id not in self.sensor_updated_at:
             return True
-
 
         if self.last_values.get(sensor_id, None) != value:
             return True
@@ -169,7 +153,6 @@ class MQTTControl:
 
     def handle_sensor_updates(self, message):
         # Handle the sensors based on the info returned from our tub.
-        # Buttons must be done separately.
         # NFI about lights, temp setting and other modes yet
         for item in message.message_configuration:
             entity_type = EntityType(item.get('type', EntityType.SENSOR))
@@ -193,4 +176,4 @@ class MQTTControl:
                         # Temporarily assume a standard sensor
                         self.sensor(entity_key, ha, value, as_binary=binary_sensor)
                 case '_':
-                    print('DEFAULT')
+                    self.logger.warning(f"Encountered an unknown entity type in the config manifest {entity_type}")

@@ -1,4 +1,5 @@
 import csv
+import logging
 from datetime import datetime
 
 from spa2mqtt.spas.base.spa import Spa
@@ -20,7 +21,7 @@ class JacuzziEncryptedSpa(Spa):
     requested_new_channel = False
 
     def __init__(self, model: str, serial_number: str, communicator_send_cb,
-                 message_configuration: dict = {}, mqtt=None, debug: bool = False):
+                 message_configuration: dict = {}, mqtt=None, debug: bool = False, logger: logging.Logger = None):
 
         super().__init__(model=model, serial_number=serial_number, message_configuration=message_configuration,
                          mqtt=mqtt, communicator_send_cb=communicator_send_cb)
@@ -29,8 +30,10 @@ class JacuzziEncryptedSpa(Spa):
         self.communicator_send_cb = communicator_send_cb
         self.message_configuration = message_configuration
 
+        self.logger = logger or logging.getLogger(f"jacuzzi2mqtt_spas.{__name__}")
+
         if self.debug:
-            print("Debug mode is on")
+            self.logger.warning("Debug mode is on")
             self.debug_file = open("debug_messages.csv", "a", newline="")
             self.writer = csv.writer(self.debug_file)
 
@@ -44,12 +47,11 @@ class JacuzziEncryptedSpa(Spa):
         self.channel_confidence += 1
 
         if self.channel_confidence >= self.CHANNEL_EMPTY_CONFIDENCE_THRESHOLD and not self.channel_requested:
-            # await self.request_channel()
 
             self.channel = next((x for x in sorted(self.channels_seen) if x not in set(self.channels_active)), None)
             if self.channel is not None:
                 self.channel_requested = True
-                print(f'Claimed channel {self.channel}')
+                self.logger.info(f'Claimed open and dormant channel {self.channel}')
 
             if self.channel is None and self.requested_new_channel is False:
                 await self.request_channel()
@@ -59,11 +61,13 @@ class JacuzziEncryptedSpa(Spa):
         return True
 
     async def request_channel(self):
+        self.logger.debug(f'Requesting new channel from controller')
         data = bytearray([0xF1, 0x73])
         channel_request_packet = JacuzziEncryptedPacket.construct_with_params(mid=0xFE, channel=0xBF, packet_type=0x01, body=data)
         await self.communicator_send_cb(channel_request_packet.raw)
 
     async def ack_channel(self, channel: int):
+        self.logger.debug(f'Ack channel {channel}')
         data = bytearray([])
         channel_ack_packet = JacuzziEncryptedPacket.construct_with_params(
             mid=0xBF,
@@ -73,7 +77,6 @@ class JacuzziEncryptedSpa(Spa):
         )
         await self.communicator_send_cb(channel_ack_packet.raw)
 
-        print(f"Channel {channel} claimed.")
         return True
 
     async def can_send(self, packet: JacuzziEncryptedPacket):
@@ -138,8 +141,6 @@ class JacuzziEncryptedSpa(Spa):
         :param payload:
         :return:
         """
-        # print(f"Message from {self.model_name} at {timestamp.time().isoformat()}: Len {len(message)}")
-
         pkt = JacuzziEncryptedPacket.from_raw(payload)
         message = JacuzziEncryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
 
@@ -174,18 +175,12 @@ class JacuzziEncryptedSpa(Spa):
 
                 pass
             case JacuzziEncryptedPacketType.CHANNEL_ASSIGNMENT_RESPONSE:
-                # Let's not magic number this.
                 # Also I've just realised that we'll ack the Chan response to any device on the bus with this.
                 # Should probably be selective.
                 await self.ack_channel(pkt.get_field(0))
             case _:
-                # print(pkt)
+                self.logger.debug(f"Received a message using an unhandled packet type {pkt.as_enum()}.")
                 pass
-
-        # Here's the place to deviate behaviour if we want to selectively process certain packet types. I suppose
-        # We should think about implementing a channelising mechanism.
-        # print(pkt)
-        # <Packet STATUS_UPDATE ch=0x0a mid=0xbf type=0xc4 payload=...>
 
         return True
 
@@ -197,7 +192,7 @@ class JacuzziEncryptedSpa(Spa):
 
         if self.command_hysteresis_control != 1:
             commands = int((self.command_temperature - message.parse().get('setpoint_temperature')) / 0.5)
-            print(f"Requires {commands} to hit target temperature")
+            self.logger.debug(f"Requires {commands} to hit target temperature")
 
             if commands > 0:
                 btn = JacuzziTopsideControllerButton.BTN_TEMP_UP
@@ -215,13 +210,13 @@ class JacuzziEncryptedSpa(Spa):
 
         if self.target_match_count > 3:
             # We're now set, or something's awry
-            print("Delayed")
+            self.logger.debug("Stability threshold met")
 
             if self.command_temperature == message.parse().get('setpoint_temperature'):
                 self.command_temperature = None
+                self.logger.debug("Target reached")
 
             self.target_match_count = 0
             self.command_hysteresis_control = 0
-
 
         return True

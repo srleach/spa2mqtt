@@ -1,11 +1,7 @@
 import csv
-import sys
 from datetime import datetime
-from typing import Callable
 
-from spa2mqtt.spas.base.packet import Packet
 from spa2mqtt.spas.base.spa import Spa
-from spa2mqtt.spas.jacuzzi_encrypted.messages import JacuzziEncryptedMessage
 from spa2mqtt.spas.jacuzzi_encrypted.packet import JacuzziEncryptedPacket
 
 # our messages expose the factory and base message entities to us
@@ -18,6 +14,10 @@ DEBUG_MODE = False
 class JacuzziEncryptedSpa(Spa):
     last_outbound = 0
     channels_active = []
+    command_temperature: float = None
+    command_hysteresis_control = 0
+    target_match_count = 0
+    requested_new_channel = False
 
     def __init__(self, model: str, serial_number: str, communicator_send_cb,
                  message_configuration: dict = {}, mqtt=None, debug: bool = False):
@@ -37,7 +37,7 @@ class JacuzziEncryptedSpa(Spa):
     def queue_packet(self, packet: JacuzziEncryptedPacket):
         self.send_buffer.append(packet)
 
-    def claim_channel_when_ready(self, packet: JacuzziEncryptedPacket):
+    async def claim_channel_when_ready(self, packet: JacuzziEncryptedPacket):
         if packet.channel not in self.channels_active:
             self.channels_active.append(packet.channel)
 
@@ -45,10 +45,35 @@ class JacuzziEncryptedSpa(Spa):
 
         if self.channel_confidence >= self.CHANNEL_EMPTY_CONFIDENCE_THRESHOLD and not self.channel_requested:
             # await self.request_channel()
-            self.channel_requested = True
-            self.channel = next((x for x in sorted(self.channels_seen) if x not in set(self.channels_active)), None)
-            print(f"Got Channel: {self.channel}")
 
+            self.channel = next((x for x in sorted(self.channels_seen) if x not in set(self.channels_active)), None)
+            if self.channel is not None:
+                self.channel_requested = True
+                print(f'Claimed channel {self.channel}')
+
+            if self.channel is None and self.requested_new_channel is False:
+                await self.request_channel()
+                self.requested_new_channel = True
+                return False
+
+        return True
+
+    async def request_channel(self):
+        data = bytearray([0xF1, 0x73])
+        channel_request_packet = JacuzziEncryptedPacket.construct_with_params(mid=0xFE, channel=0xBF, packet_type=0x01, body=data)
+        await self.communicator_send_cb(channel_request_packet.raw)
+
+    async def ack_channel(self, channel: int):
+        data = bytearray([])
+        channel_ack_packet = JacuzziEncryptedPacket.construct_with_params(
+            mid=0xBF,
+            channel=channel,
+            packet_type=JacuzziEncryptedPacketType.CHANNEL_ASSIGNMENT_ACK,
+            body=data
+        )
+        await self.communicator_send_cb(channel_ack_packet.raw)
+
+        print(f"Channel {channel} claimed.")
         return True
 
     async def can_send(self, packet: JacuzziEncryptedPacket):
@@ -70,35 +95,6 @@ class JacuzziEncryptedSpa(Spa):
 
         return False
 
-    async def request_channel(self):
-        """
-        We don't actually need to call this if there's a seemingly dormant channel already seen with no activity - we'll
-        just claim that instead.
-        :return:
-        """
-        data = bytearray([0xF1, 0x73])
-        channel_request_packet = JacuzziEncryptedPacket.construct_with_params(mid=0xFE, channel=0xBF, packet_type=0x01,
-                                                                              body=data)
-
-        # We want to emit this directly, without queuing in this circumstance
-        await self.communicator_send_cb(channel_request_packet.raw)
-
-    async def ack_channel(self, channel: int):
-        data = bytearray([])
-        channel_ack_packet = JacuzziEncryptedPacket.construct_with_params(
-            mid=0xBF,
-            channel=channel,
-            packet_type=JacuzziEncryptedPacketType.CHANNEL_ASSIGNMENT_ACK,
-            body=data
-        )
-
-        # We want to emit this directly, without queuing in this circumstance
-        await self.communicator_send_cb(channel_ack_packet.raw)
-
-        self.channel = channel
-        print(f"Channel {channel} claimed.")
-        return True
-
     async def send_queued_message(self):
         if self.channel is None:
             return True
@@ -110,13 +106,13 @@ class JacuzziEncryptedSpa(Spa):
 
         await self.communicator_send_cb(packet.raw)
 
-    def queue_button_command(self, button: int):
+    async def queue_button_command(self, button: int, send_immediately: bool = False):
         """
-        We'll need to do something about the button int - let's IntEnum it later. TODO
+        Queue a button command. In some cases, we'd like this to skip the queue. Use send_immediately if you want that.
+        :param send_immediately:
         :param button:
         :return:
         """
-        print(f"Attempting to send button command {button}")
         data = bytearray([button, 0])
         btn_packet = JacuzziEncryptedPacket.construct_with_params(
             mid=0xBF,
@@ -125,7 +121,13 @@ class JacuzziEncryptedSpa(Spa):
             body=data
         )
 
-        self.queue_packet(btn_packet)
+        if send_immediately:
+            self.queue_packet(btn_packet)
+        else:
+            await self.communicator_send_cb(btn_packet.raw)
+
+    async def set_command_temperature(self, temperature: float):
+        self.command_temperature = float(temperature)
 
     async def process_update(self, timestamp: datetime, payload: bytes):
         """
@@ -141,22 +143,12 @@ class JacuzziEncryptedSpa(Spa):
         pkt = JacuzziEncryptedPacket.from_raw(payload)
         message = JacuzziEncryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
 
-        # if False:
-        #     ts = datetime.now().timestamp()
-        #
-        #     if ts - self.last_outbound > 1:
-        #         self.last_outbound = ts
-        #         if self.channel is not None:
-        #             self.queue_button_command(JacuzziTopsideControllerButton.BTN_TEMP_UP)
-
         match pkt.as_enum():
 
             # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of
             # each message type for the time being.
             case JacuzziEncryptedPacketType.STATUS_UPDATE:
-                if DEBUG_MODE:
-                    self.writer.writerow(pkt.data)
-
+                await self.do_command_loop(message=message)
                 self.mqtt.handle_sensor_updates(message=message)
                 pass
             case JacuzziEncryptedPacketType.LIGHTS_UPDATE | JacuzziEncryptedPacketType.LIGHTS_UPDATE_ALT_23:
@@ -165,6 +157,7 @@ class JacuzziEncryptedSpa(Spa):
                 can_send = await self.can_send(pkt)
 
                 if can_send:
+
                     await self.send_queued_message()
                 pass
             case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
@@ -177,15 +170,14 @@ class JacuzziEncryptedSpa(Spa):
                 We'll use this message to build a representation of devices on the network in order to claim a channel,
                 while reusing a dormant one if available.
                 """
-                self.claim_channel_when_ready(pkt)
+                await self.claim_channel_when_ready(pkt)
 
                 pass
             case JacuzziEncryptedPacketType.CHANNEL_ASSIGNMENT_RESPONSE:
                 # Let's not magic number this.
                 # Also I've just realised that we'll ack the Chan response to any device on the bus with this.
                 # Should probably be selective.
-                print("WARNING: Received CHAN ASSIGNMENT response, this is currently skipped.")
-                # await self.ack_channel(pkt.get_field(0))
+                await self.ack_channel(pkt.get_field(0))
             case _:
                 # print(pkt)
                 pass
@@ -194,5 +186,42 @@ class JacuzziEncryptedSpa(Spa):
         # We should think about implementing a channelising mechanism.
         # print(pkt)
         # <Packet STATUS_UPDATE ch=0x0a mid=0xbf type=0xc4 payload=...>
+
+        return True
+
+    async def do_command_loop(self, message: Message):
+        # This is temporarily only concerned with temp. We may want to change this for declarative control of pumps.
+
+        if self.command_temperature is None:
+            return
+
+        if self.command_hysteresis_control != 1:
+            commands = int((self.command_temperature - message.parse().get('setpoint_temperature')) / 0.5)
+            print(f"Requires {commands} to hit target temperature")
+
+            if commands > 0:
+                btn = JacuzziTopsideControllerButton.BTN_TEMP_UP
+            else:
+                btn = JacuzziTopsideControllerButton.BTN_TEMP_DOWN
+
+            for _ in range(abs(commands)):
+                await self.queue_button_command(btn)
+
+            self.command_hysteresis_control = 1
+
+            return True
+
+        self.target_match_count += 1
+
+        if self.target_match_count > 3:
+            # We're now set, or something's awry
+            print("Delayed")
+
+            if self.command_temperature == message.parse().get('setpoint_temperature'):
+                self.command_temperature = None
+
+            self.target_match_count = 0
+            self.command_hysteresis_control = 0
+
 
         return True

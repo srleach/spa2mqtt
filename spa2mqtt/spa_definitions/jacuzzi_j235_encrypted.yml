@@ -18,8 +18,7 @@ message_configuration:
         device_class: temperature
       offset: 5
       length: 1
-      xor: 0x02
-      scale: 0.5  # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
+      scale: 0.5
     - name: setpoint_temperature
       home_assistant:
         name: Target Water Temperature
@@ -27,79 +26,32 @@ message_configuration:
         unit_of_measurement: "°C"
         device_class: temperature
       offset: 8
-      scale: 0.5 # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
-    - name: circulation_pump_status
+      scale: 0.5
+    - name: pump_status
       type: binary_sensor
       home_assistant:
-        name: Circulation Pump Status
+        name: Pump Status
         icon: mdi:water-pump
         entity_category: diagnostic
         device_class: running
-      offset: 1
-      shift: 6
-      mask: 1
-#
-
-
-#    - name: clearray_status
-#      type: binary_sensor
-#      home_assistant:
-#        name: Clearray Status
-#        icon: mdi:lightbulb-cfl
-#        entity_category: diagnostic
-#        device_class: running
-#      offset: 7
-#      shift: 6
-#      mask: 0xc0
-
-#
-    - name: secondary_pump_status
-      type: binary_sensor
+      offset: 10
+      output_map:
+        0: "off"
+        64: "circulation"
+        128: "pump1"
+        192: "both"
+    - name: time_minutes
       home_assistant:
-        name: Secondary Pump Status
-        icon: mdi:water-pump
+        name: Time Minutes
+        icon: mdi:clock
         entity_category: diagnostic
-        device_class: running
-      offset: 1
-      shift: 2
-      mask: 1 # This is possibly not necessary in this particular operation
-#
-#
-    - name: main_pump_status
-      type: binary_sensor
+      offset: 11
+    - name: time_hour
       home_assistant:
-        name: Main Pump Status
-        icon: mdi:water-pump
+        name: Time Hour
+        icon: mdi:clock
         entity_category: diagnostic
-        device_class: running
-      offset: 2
-      shift: 4
-      mask: 1
-
-
-#    - name: water_life_remaining
-#      home_assistant:
-#        name: Water Life Remaining
-#        icon: mdi:water-check
-#        unit_of_measurement: "days"
-#        entity_category: diagnostic
-#      offset: 12
-#      length: 1
-#    - name: filter_life_remaining
-#      home_assistant:
-#        name: Filter Life Remaining
-#        icon: mdi:filter-check
-#        unit_of_measurement: "days"
-#        entity_category: diagnostic
-#      offset: 3
-#      xor: 14
-#    - name: clearray_life_remaining
-#      home_assistant:
-#        name: Clearray Life Remaining
-#        icon: mdi:lightbulb-cfl
-#        unit_of_measurement: "days"
-#        entity_category: diagnostic
-#      offset: 13
+      offset: 14
     - name: temperature_increment
       type: button
       home_assistant:

@@ -16,6 +16,7 @@ class Spa:
     message_configuration: dict
     serial_number: str
     debug: bool = False
+    capture_mode: bool = False
 
     packets_written: int = 0
 
@@ -36,9 +37,11 @@ class Spa:
         mqtt=None,
         debug: bool = False,
         protocol: Optional["Protocol"] = None,
+        capture_mode: bool = False,
     ):
 
         self.debug = debug
+        self.capture_mode = capture_mode
         self.mqtt = mqtt
         self.serial_number = serial_number
         self.message_configuration = message_configuration
@@ -46,14 +49,37 @@ class Spa:
         self.communicator_send_cb = communicator_send_cb
         self.protocol = protocol
 
-        if self.debug:
+        if self.debug or self.capture_mode:
             filename = datetime.now().strftime("%Y%m%d-%H%M%S")
-            self.debug_file = open(f"debug_{filename}.csv", "a", newline="")
+            self.debug_file = open(f"{filename}-packets.csv", "a", newline="")
             self.writer = csv.writer(self.debug_file)
+            if self.capture_mode:
+                self.writer.writerow(
+                    ["timestamp", "raw_hex", "packet_type", "channel", "decoded_fields"]
+                )
 
     async def process_update(self, timestamp: datetime, payload: bytes):
-        if self.debug:
-            self.writer.writerow([timestamp, payload.hex()])
+        if self.debug or self.capture_mode:
+            if self.capture_mode:
+                pkt = Packet.from_raw(payload)
+                if self.protocol:
+                    pkt = pkt.with_protocol(self.protocol)
+                msg = MessageFactory.from_packet(
+                    pkt, message_configuration=self.message_configuration
+                )
+                fields = msg.parse() if hasattr(msg, "parse") else {}
+                pkt_type = pkt.as_enum()
+                self.writer.writerow(
+                    [
+                        timestamp.isoformat(),
+                        payload.hex(),
+                        pkt_type.name if pkt_type else f"0x{pkt.packet_type:02x}",
+                        pkt.channel,
+                        str(fields),
+                    ]
+                )
+            else:
+                self.writer.writerow([timestamp, payload.hex()])
             print(f"{timestamp}_: {payload.hex()}")
             self.packets_written += 1
             self.debug_file.flush()

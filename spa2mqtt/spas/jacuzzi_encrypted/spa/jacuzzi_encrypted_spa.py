@@ -30,6 +30,7 @@ class JacuzziEncryptedSpa(Spa):
         debug: bool = False,
         logger: logging.Logger = None,
         protocol: Optional = None,
+        capture_mode: bool = False,
     ):
 
         super().__init__(
@@ -39,6 +40,7 @@ class JacuzziEncryptedSpa(Spa):
             mqtt=mqtt,
             communicator_send_cb=communicator_send_cb,
             protocol=protocol,
+            capture_mode=capture_mode,
         )
 
         self.debug = debug

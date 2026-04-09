@@ -1,21 +1,16 @@
-# --- Base Packet class ---
-import sys
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, TYPE_CHECKING
 
 from spa2mqtt.spas.base.packet_types import PacketType
 
-T = TypeVar('T', bound=PacketType)
+if TYPE_CHECKING:
+    from spa2mqtt.protocols import Protocol
+
+T = TypeVar("T", bound=PacketType)
 
 
 @dataclass
 class Packet:
-    """
-    There's a risk that some of our logic here is becoming quite implementation specific. I think, practically that much
-    of this may be better placed in the subclass, but until we've seen other variant tubs I don't know if this format
-    is common, rare, etc. For the time being, we'll put message decoding specifics here and only do the enc. stuff
-    in the JacuzziEncryptedPacket
-    """
     raw: bytes
     channel: int
     len: int
@@ -25,12 +20,19 @@ class Packet:
     payload: bytes
     body: bytes
     cs_pass: bool = False
+    _protocol: Optional["Protocol"] = None
 
-    PACKET_DELIMITER: bytes = 0x7e
+    PACKET_DELIMITER: bytes = 0x7E
 
     @property
     def data(self) -> list[int]:
+        if self._protocol is not None:
+            return self._protocol.decode_body(self.body)
         return list(self.body)
+
+    def with_protocol(self, protocol: "Protocol") -> "Packet":
+        self._protocol = protocol
+        return self
 
     def as_enum(self) -> Optional[PacketType]:
         try:
@@ -40,18 +42,22 @@ class Packet:
 
     def __repr__(self):
         label = self.as_enum()
-        label_str = label.name if label is not None else f"UNKNOWN_{self.packet_type:02X}"
-        return (f"<{self.__class__.__name__}"
-                f" {label_str}"
-                f" ch=0x{self.channel:02x}"
-                f" len={self.len}"
-                f" mid=0x{self.mid:02x}"
-                f" checksum={self.checksum:02x}"
-                f" valid={self.cs_pass}"
-                f" type=0x{self.packet_type:02x}"
-                f" body={self.body.hex() or None}"
-                f" raw={self.raw.hex()}"
-                f">")
+        label_str = (
+            label.name if label is not None else f"UNKNOWN_{self.packet_type:02X}"
+        )
+        return (
+            f"<{self.__class__.__name__}"
+            f" {label_str}"
+            f" ch=0x{self.channel:02x}"
+            f" len={self.len}"
+            f" mid=0x{self.mid:02x}"
+            f" checksum={self.checksum:02x}"
+            f" valid={self.cs_pass}"
+            f" type=0x{self.packet_type:02x}"
+            f" body={self.body.hex() or None}"
+            f" raw={self.raw.hex()}"
+            f">"
+        )
 
     def get_field(self, field):
         return self.data[field]
@@ -79,11 +85,21 @@ class Packet:
         cs = cls.calculate_checksum(raw[1:-2])
 
         if cs != checksum:
-            raise ValueError(f"Checksum mismatch: Indicated[{checksum}] / Calculated[{cs}]")
+            raise ValueError(
+                f"Checksum mismatch: Indicated[{checksum}] / Calculated[{cs}]"
+            )
 
-        return cls(raw=raw, channel=channel, mid=mid, packet_type=packet_type, payload=raw, len=length,
-                   checksum=checksum, body=body, cs_pass=True)
-
+        return cls(
+            raw=raw,
+            channel=channel,
+            mid=mid,
+            packet_type=packet_type,
+            payload=raw,
+            len=length,
+            checksum=checksum,
+            body=body,
+            cs_pass=True,
+        )
 
     @classmethod
     def calculate_checksum(self, data):

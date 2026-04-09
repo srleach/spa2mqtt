@@ -27,7 +27,7 @@ message_configuration:
         device_class: temperature
       offset: 8
     - name: circulation_pump_status
-      binary_sensor: True
+      type: binary_sensor
       home_assistant:
         name: Circulation Pump Status
         icon: mdi:water-pump
@@ -37,7 +37,7 @@ message_configuration:
       shift: 6
       mask: 1
     - name: main_pump_status
-      binary_sensor: True
+      type: binary_sensor
       home_assistant:
         name: Main Pump Status
         icon: mdi:water-pump
@@ -47,7 +47,7 @@ message_configuration:
       shift: 2
       mask: 1 # This is possibly not necessary in this particular operation
     - name: secondary_pump_status
-      binary_sensor: True
+      type: binary_sensor
       home_assistant:
         name: Secondary Pump Status
         icon: mdi:water-pump

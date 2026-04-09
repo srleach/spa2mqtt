@@ -1,7 +1,7 @@
 from spa2mqtt.spas.base.messages.message import Message
 
 
-class JacuzziUnencryptedMessageFactory:
+class MessageFactory:
     _message_map = {}
 
     @classmethod

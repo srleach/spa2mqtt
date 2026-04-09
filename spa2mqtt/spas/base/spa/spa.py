@@ -1,11 +1,14 @@
 import csv
 from collections import deque
 from datetime import datetime
-from typing import List
+from typing import List, Optional, TYPE_CHECKING
 
-from spa2mqtt.spas.base.messages.message_factory import JacuzziUnencryptedMessageFactory
+from spa2mqtt.spas.base.messages.message_factory import MessageFactory
 from spa2mqtt.spas.base.packet import Packet
 from spa2mqtt.spas.base.packet_types import PacketType
+
+if TYPE_CHECKING:
+    from spa2mqtt.protocols import Protocol
 
 
 class Spa:
@@ -24,8 +27,16 @@ class Spa:
 
     CHANNEL_EMPTY_CONFIDENCE_THRESHOLD: int = 5
 
-    def __init__(self, model: str, serial_number: str, communicator_send_cb,
-                 message_configuration: dict = {}, mqtt=None, debug: bool = False):
+    def __init__(
+        self,
+        model: str,
+        serial_number: str,
+        communicator_send_cb,
+        message_configuration: dict = {},
+        mqtt=None,
+        debug: bool = False,
+        protocol: Optional["Protocol"] = None,
+    ):
 
         self.debug = debug
         self.mqtt = mqtt
@@ -33,6 +44,7 @@ class Spa:
         self.message_configuration = message_configuration
         self.model_name = model
         self.communicator_send_cb = communicator_send_cb
+        self.protocol = protocol
 
         if self.debug:
             filename = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -40,14 +52,6 @@ class Spa:
             self.writer = csv.writer(self.debug_file)
 
     async def process_update(self, timestamp: datetime, payload: bytes):
-        """
-        We're doing a callback back into the Jacuzzi responsibility here to keep the decoding within the domain of the
-        variant. The intention is that for additional spa variants we can expose additional config types that can reuse
-        the bulk of the communications logic and simply hand off tub specific logic where required.
-        :param timestamp:
-        :param payload:
-        :return:
-        """
         if self.debug:
             self.writer.writerow([timestamp, payload.hex()])
             print(f"{timestamp}_: {payload.hex()}")
@@ -57,10 +61,12 @@ class Spa:
             return True
 
         pkt = Packet.from_raw(payload)
-        message = JacuzziUnencryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
+        if self.protocol:
+            pkt = pkt.with_protocol(self.protocol)
 
-        # The only deviation from the encrypted packet we need to take is to assert we're paying attention to the MID,
-        # Channel and Type - and the type. Our type interpolation on the PacketType enum may not be bang on.
+        message = MessageFactory.from_packet(
+            pkt, message_configuration=self.message_configuration
+        )
 
         match pkt.as_enum():
             case PacketType.FILTER_CYCLE:

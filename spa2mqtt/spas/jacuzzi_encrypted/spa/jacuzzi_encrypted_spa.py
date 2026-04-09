@@ -1,11 +1,11 @@
 import csv
 import logging
 from datetime import datetime
+from typing import Optional
 
 from spa2mqtt.spas.base.spa import Spa
 from spa2mqtt.spas.jacuzzi_encrypted.packet import JacuzziEncryptedPacket
 
-# our messages expose the factory and base message entities to us
 from spa2mqtt.spas.jacuzzi_encrypted.messages.JacuzziEncryptedMessage import *
 from spa2mqtt.spas.jacuzzi_encrypted.packet_types import JacuzziTopsideControllerButton
 
@@ -20,11 +20,26 @@ class JacuzziEncryptedSpa(Spa):
     target_match_count = 0
     requested_new_channel = False
 
-    def __init__(self, model: str, serial_number: str, communicator_send_cb,
-                 message_configuration: dict = {}, mqtt=None, debug: bool = False, logger: logging.Logger = None):
+    def __init__(
+        self,
+        model: str,
+        serial_number: str,
+        communicator_send_cb,
+        message_configuration: dict = {},
+        mqtt=None,
+        debug: bool = False,
+        logger: logging.Logger = None,
+        protocol: Optional = None,
+    ):
 
-        super().__init__(model=model, serial_number=serial_number, message_configuration=message_configuration,
-                         mqtt=mqtt, communicator_send_cb=communicator_send_cb)
+        super().__init__(
+            model=model,
+            serial_number=serial_number,
+            message_configuration=message_configuration,
+            mqtt=mqtt,
+            communicator_send_cb=communicator_send_cb,
+            protocol=protocol,
+        )
 
         self.debug = debug
         self.communicator_send_cb = communicator_send_cb
@@ -34,7 +49,9 @@ class JacuzziEncryptedSpa(Spa):
 
         if self.debug:
             self.logger.warning("Debug mode is on")
-            self.debug_file = open(f"{datetime.now().timestamp()}-debug_messages.csv", "a", newline="")
+            self.debug_file = open(
+                f"{datetime.now().timestamp()}-debug_messages.csv", "a", newline=""
+            )
             self.writer = csv.writer(self.debug_file)
 
     def queue_packet(self, packet: JacuzziEncryptedPacket):
@@ -46,12 +63,21 @@ class JacuzziEncryptedSpa(Spa):
 
         self.channel_confidence += 1
 
-        if self.channel_confidence >= self.CHANNEL_EMPTY_CONFIDENCE_THRESHOLD and not self.channel_requested:
-
-            self.channel = next((x for x in sorted(self.channels_seen) if x not in set(self.channels_active)), None)
+        if (
+            self.channel_confidence >= self.CHANNEL_EMPTY_CONFIDENCE_THRESHOLD
+            and not self.channel_requested
+        ):
+            self.channel = next(
+                (
+                    x
+                    for x in sorted(self.channels_seen)
+                    if x not in set(self.channels_active)
+                ),
+                None,
+            )
             if self.channel is not None:
                 self.channel_requested = True
-                self.logger.info(f'Claimed open and dormant channel {self.channel}')
+                self.logger.info(f"Claimed open and dormant channel {self.channel}")
 
             if self.channel is None and self.requested_new_channel is False:
                 await self.request_channel()
@@ -61,19 +87,21 @@ class JacuzziEncryptedSpa(Spa):
         return True
 
     async def request_channel(self):
-        self.logger.debug(f'Requesting new channel from controller')
+        self.logger.debug(f"Requesting new channel from controller")
         data = bytearray([0xF1, 0x73])
-        channel_request_packet = JacuzziEncryptedPacket.construct_with_params(mid=0xFE, channel=0xBF, packet_type=0x01, body=data)
+        channel_request_packet = JacuzziEncryptedPacket.construct_with_params(
+            mid=0xFE, channel=0xBF, packet_type=0x01, body=data
+        )
         await self.communicator_send_cb(channel_request_packet.raw)
 
     async def ack_channel(self, channel: int):
-        self.logger.debug(f'Ack channel {channel}')
+        self.logger.debug(f"Ack channel {channel}")
         data = bytearray([])
         channel_ack_packet = JacuzziEncryptedPacket.construct_with_params(
             mid=0xBF,
             channel=channel,
             packet_type=JacuzziEncryptedPacketType.CHANNEL_ASSIGNMENT_ACK,
-            body=data
+            body=data,
         )
         await self.communicator_send_cb(channel_ack_packet.raw)
 
@@ -121,7 +149,7 @@ class JacuzziEncryptedSpa(Spa):
             mid=0xBF,
             channel=self.channel,
             packet_type=JacuzziEncryptedPacketType.CC_REQ,
-            body=data
+            body=data,
         )
 
         if send_immediately:
@@ -142,28 +170,34 @@ class JacuzziEncryptedSpa(Spa):
         :return:
         """
         pkt = JacuzziEncryptedPacket.from_raw(payload)
-        message = JacuzziEncryptedMessageFactory.from_packet(pkt, message_configuration=self.message_configuration)
+        message = JacuzziEncryptedMessageFactory.from_packet(
+            pkt, message_configuration=self.message_configuration
+        )
 
         match pkt.as_enum():
-
             # This block does not need to be so verbose, but while we're building this out I've stubbed the handling of
             # each message type for the time being.
             case JacuzziEncryptedPacketType.STATUS_UPDATE:
                 await self.do_command_loop(message=message)
                 self.mqtt.handle_sensor_updates(message=message)
                 pass
-            case JacuzziEncryptedPacketType.LIGHTS_UPDATE | JacuzziEncryptedPacketType.LIGHTS_UPDATE_ALT_23:
+            case (
+                JacuzziEncryptedPacketType.LIGHTS_UPDATE
+                | JacuzziEncryptedPacketType.LIGHTS_UPDATE_ALT_23
+            ):
                 pass
             case JacuzziEncryptedPacketType.CLEAR_TO_SEND:
                 can_send = await self.can_send(pkt)
 
                 if can_send:
-
                     await self.send_queued_message()
                 pass
             case JacuzziEncryptedPacketType.CLIENT_CLEAR_TO_SEND:
                 pass
-            case JacuzziEncryptedPacketType.CC_REQ | JacuzziEncryptedPacketType.CC_REQ_ALT_17:
+            case (
+                JacuzziEncryptedPacketType.CC_REQ
+                | JacuzziEncryptedPacketType.CC_REQ_ALT_17
+            ):
                 """
                 We've received a message from another device in the bus. This is intended for the board, but we may 
                 wish to carry out some actions as a result.
@@ -179,7 +213,9 @@ class JacuzziEncryptedSpa(Spa):
                 # Should probably be selective.
                 await self.ack_channel(pkt.get_field(0))
             case _:
-                self.logger.debug(f"Received a message using an unhandled packet type {pkt.as_enum()}.")
+                self.logger.debug(
+                    f"Received a message using an unhandled packet type {pkt.as_enum()}."
+                )
                 pass
 
     async def do_command_loop(self, message: Message):
@@ -189,7 +225,10 @@ class JacuzziEncryptedSpa(Spa):
             return
 
         if self.command_hysteresis_control != 1:
-            commands = int((self.command_temperature - message.parse().get('setpoint_temperature')) / 0.5)
+            commands = int(
+                (self.command_temperature - message.parse().get("setpoint_temperature"))
+                / 0.5
+            )
             self.logger.debug(f"Requires {commands} to hit target temperature")
 
             if commands > 0:
@@ -210,7 +249,7 @@ class JacuzziEncryptedSpa(Spa):
             # We're now set, or something's awry
             self.logger.debug("Stability threshold met")
 
-            if self.command_temperature == message.parse().get('setpoint_temperature'):
+            if self.command_temperature == message.parse().get("setpoint_temperature"):
                 self.command_temperature = None
                 self.logger.debug("Target reached")
 

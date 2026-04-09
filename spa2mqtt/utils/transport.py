@@ -11,21 +11,19 @@ def load_class(module_name: str, class_name: str):
     return getattr(module, class_name)
 
 
-def make_tub(family: str, spa_variant: str, args):  # TODO: Hint Return Type...
+def make_tub(family: str, spa_variant: str, args: dict):
     return load_class(f"spa2mqtt.spas.{family}.spa", spa_variant)(**args)
 
 
-def make_communicator(family: str, communicator: str, args) -> Communicator:
+def make_communicator(family: str, communicator: str, args: dict) -> Communicator:
     return load_class(f"spa2mqtt.spas.{family}.communicator", communicator)(**args)
 
 
-def get_communicator(spa_configuration: dict, variant_configuration: dict) -> Communicator:
-    """
-    Build the communicator for SPAs.
-    :return:
-    """
+def get_communicator(
+    spa_configuration: dict, variant_configuration: dict
+) -> Communicator:
     return make_communicator(
-        variant_configuration.get('family'),
-        variant_configuration.get('communicator'),
-        spa_configuration.get('connection')
+        variant_configuration.get("family"),
+        variant_configuration.get("communicator"),
+        spa_configuration.get("connection"),
     )

@@ -2,6 +2,7 @@ family: jacuzzi_encrypted
 communicator: JacuzziEncryptedCommunicator
 spa: JacuzziEncryptedSpa
 model_name: Jacuzzi J235
+device_id: spa_j235
 serial_number: Not Set
 sensor_update_intervals:
   default: 60
@@ -17,9 +18,7 @@ message_configuration:
         unit_of_measurement: "°C"
         device_class: temperature
       offset: 5
-      length: 1
-      xor: 0x02
-      scale: 0.5  # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
+      scale: 0.5
     - name: setpoint_temperature
       home_assistant:
         name: Target Water Temperature
@@ -27,17 +26,88 @@ message_configuration:
         unit_of_measurement: "°C"
         device_class: temperature
       offset: 8
-      scale: 0.5 # This will vary if we're in F or C - if C, 0.5 else you can omit or set to 1
-    - name: circulation_pump_status
+      scale: 0.5
+    - name: pump_status
       type: binary_sensor
       home_assistant:
-        name: Circulation Pump Status
+        name: Pump Status
         icon: mdi:water-pump
         entity_category: diagnostic
         device_class: running
-      offset: 1
-      shift: 6
-      mask: 1
+      offset: 10
+      output_map:
+        0: "off"
+        64: "on"
+        128: "on"
+        192: "on"
+    - name: pump_status_detail
+      home_assistant:
+        name: Pump Status Detail
+        icon: mdi:water-pump
+        entity_category: diagnostic
+      offset: 10
+      output_map:
+        0: "off"
+        64: "circulation"
+        128: "jet_pump"
+        192: "both"
+    - name: time_minutes
+      home_assistant:
+        name: Time Minutes
+        icon: mdi:clock
+        entity_category: diagnostic
+      offset: 11
+    - name: time_hour
+      home_assistant:
+        name: Time Hour
+        icon: mdi:clock
+        entity_category: diagnostic
+      offset: 14
+    - name: temperature_increment
+      type: button
+      home_assistant:
+        name: Temperature Increment
+      action:
+        method: queue_button_command
+        args:
+          button: 225
+    - name: temperature_decrement
+      type: button
+      home_assistant:
+        name: Temperature Decrement
+      action:
+        method: queue_button_command
+        args:
+          button: 226
+    - name: pump_1_button
+      type: button
+      home_assistant:
+        name: Pump 1 Button
+      action:
+        method: queue_button_command
+        args:
+          button: 228
+    - name: pump_2_button
+      type: button
+      home_assistant:
+        name: Pump 2 Button
+      action:
+        method: queue_button_command
+        args:
+          button: 229
+    - name: temperature_set_control
+      type: number
+      home_assistant:
+        name: Temperature Set Control
+        min: 20
+        max: 40
+        step: 0.5
+        mode: slider
+      action:
+        method: set_command_temperature
+      value:
+        from: setpoint_temperature
+        stability_period: 3
 #
 
 

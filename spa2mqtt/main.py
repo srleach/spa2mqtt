@@ -3,39 +3,54 @@ import logging
 import sys
 
 from spa2mqtt.mqtt import MQTTControl
-from spa2mqtt.utils import get_application_configuration, get_variant_configuration, make_tub
+from spa2mqtt.utils import (
+    get_application_configuration,
+    get_variant_configuration,
+    make_tub,
+)
 from spa2mqtt.utils.transport import get_communicator
 
 
 async def main():
     logging.basicConfig(level=logging.INFO)
 
-    application_config = get_application_configuration(logger=logging.getLogger("ConfigManager"))
+    application_config = get_application_configuration(
+        logger=logging.getLogger("ConfigManager")
+    )
 
-    spa_configuration = application_config.get('spa', {})
-    mqtt_configuration = application_config.get('mqtt', {})
+    spa_configuration = application_config.get("spa", {})
+    mqtt_configuration = application_config.get("mqtt", {})
 
-    variant = spa_configuration.get('config', 'base')
+    variant = spa_configuration.get("config", "base")
 
     tub_config = get_variant_configuration(variant)
 
-    debug_spa = tub_config.get('debug', False)
+    debug_spa = tub_config.get("debug", False)
 
     if debug_spa:
         mqtt = None
     else:
-        mqtt = MQTTControl(broker_host=mqtt_configuration.get('broker'), broker_port=mqtt_configuration.get('port'),
-                           sensor_update_intervals=tub_config.get('sensor_update_intervals', {}))
+        device_name = tub_config.get("model_name", "Jacuzzi Spa")
+        device_id = tub_config.get("device_id")
+        mqtt = MQTTControl(
+            broker_host=mqtt_configuration.get("broker"),
+            broker_port=mqtt_configuration.get("port"),
+            sensor_update_intervals=tub_config.get("sensor_update_intervals", {}),
+            device=device_name,
+            device_id=device_id,
+        )
 
     communicator = get_communicator(
         spa_configuration=spa_configuration,
-        variant_configuration=get_variant_configuration(variant)
+        variant_configuration=get_variant_configuration(variant),
     )
 
     spa = make_tub(
-        tub_config.get('family'),
-        tub_config.get('spa'),
-        get_spa_configuration(communicator, debug_spa, mqtt, spa_configuration, tub_config)
+        tub_config.get("family"),
+        tub_config.get("spa"),
+        get_spa_configuration(
+            communicator, debug_spa, mqtt, spa_configuration, tub_config
+        ),
     )
 
     if not debug_spa:
@@ -45,10 +60,16 @@ async def main():
 
 
 def get_spa_configuration(communicator, debug_spa, mqtt, spaconfig, tub_config):
-    configuration = {"message_configuration": tub_config.get('message_configuration'),
-                     "model": spaconfig.get('model', tub_config.get('model')),
-                     "serial_number": spaconfig.get('serial_number', tub_config.get('serial_number')),
-                     'mqtt': mqtt, "communicator_send_cb": communicator.send_message_cb, "debug": debug_spa}
+    configuration = {
+        "message_configuration": tub_config.get("message_configuration"),
+        "model": spaconfig.get("model", tub_config.get("model")),
+        "serial_number": spaconfig.get(
+            "serial_number", tub_config.get("serial_number")
+        ),
+        "mqtt": mqtt,
+        "communicator_send_cb": communicator.send_message_cb,
+        "debug": debug_spa,
+    }
     return configuration
 
 

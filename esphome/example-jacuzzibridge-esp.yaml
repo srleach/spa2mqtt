@@ -1,0 +1,70 @@
+# Board: WAVESHARE ESP32-S3-ETH-8DI-8RO
+# Definition: definitions/boards/waveshare_esp32_s3_eth_8di_8ro/manifest.yaml
+#
+# Native ESPHome bridge for the Jacuzzi J235 (spa_bus external component from spa2mqtt).
+# RS485 uses the board's onboard transceiver on GPIO17 (TX) / GPIO18 (RX), as in the
+# board's archived config. Wire A/B to the tub's RS485 header (see README); 115200 8N1.
+#
+# friendly_name "Jacuzzi J235" reproduces the entity IDs the MQTT bridge created
+# (sensor.jacuzzi_j235_current_water_temperature, ...) once the old MQTT device is removed
+# from Home Assistant. See docs/design.md section 8 for the switch-over.
+
+esphome:
+  name: jacuzzibridge-esp
+  friendly_name: Jacuzzi J235
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+logger:
+  baud_rate: 0          # keep the UART free; logs go over the API
+
+api:
+  encryption:
+    key: !secret jacuzzibridge_api_key
+
+ota:
+  - platform: esphome
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+external_components:
+  # The repository is private: either make it public, or use
+  #   source: {type: git, url: https://<token>@github.com/srleach/spa2mqtt, ref: main}
+  - source: github://srleach/spa2mqtt@main
+    components: [spa_bus]
+    refresh: 1d
+
+packages:
+  # Every J235 entity, generated from definitions/jacuzzi_j235.yaml.
+  spa_entities: github://srleach/spa2mqtt/esphome/packages/jacuzzi_j235.yaml@main
+
+uart:
+  - id: spa_uart
+    tx_pin: GPIO17
+    rx_pin: GPIO18
+    baud_rate: 115200
+    rx_buffer_size: 512
+
+spa_bus:
+  id: spa
+  uart_id: spa_uart
+  definition: jacuzzi_j235
+  # SAFETY: receive-only until you set this to true. Buttons and the setpoint number log a
+  # warning and do nothing while false. With true, the first command triggers a bus channel
+  # request (docs/protocol.md section 4).
+  transmit: false
+  heartbeat: 60s
+  bus_state:
+    name: Bus State
+
+# Board extras from jacuzzibridge-esp (relays, digital inputs, RGB LED) can stay in this
+# file unchanged; they do not interact with spa_bus.

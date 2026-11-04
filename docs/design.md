@@ -373,4 +373,13 @@ jobs `python`, `cpp`, `esphome`.
 
 ## 11. Deviations from this plan
 
-None yet. Updated during implementation.
+| # | Deviation | Why |
+|---|---|---|
+| 1 | Mid-implementation, the owner's labelled raw capture (D7) arrived. The J235 definition gained `pump_1_speed` (text sensor), `light_button`, `set_mode`, and two disabled-by-default diagnostics. Internal field names were renamed to their confirmed meaning (`pump_1_running`, `pump_1_high`). Entity keys and names were unchanged. | Evidence over folklore (protocol.md §5). HA identities untouched. |
+| 2 | Channel acquisition: the 0x00/0x01 request is the primary path; dormant-channel reuse is kept as a fallback. | D7 shows the topside answers every CTS on the only polled channel, so there is never a dormant channel on this install. |
+| 3 | SetpointController waits for movement instead of counting presses. | D7: the first press only enters set mode. The planned loop already tolerated this; tests now model it explicitly (mock board). |
+| 4 | ESPHome command entities cannot be marked unavailable individually. With `transmit: false` they log a warning and do nothing, and the optional `bus_state` text sensor reads `receive-only`. | ESPHome entities have no per-entity availability. The MQTT bridge does mark them unavailable. |
+| 5 | The ESPHome `definition.py` loader uses `jsonschema` only when installed (ESPHome does not ship it) and otherwise does structural checks. CI validates every definition with the full schema. | Avoid forcing an extra dependency into users' ESPHome environments. |
+| 6 | `SpaCore` (definition tables + decoder + bus + setpoint loop) lives in the framework-free header, and `SpaBus` is a thin ESPHome wrapper. | Lets the host test drive the exact production state machine, not a copy. |
+| 7 | Docker image build is verified in CI only. | No Docker daemon in the development sandbox. |
+| 8 | Unencrypted Jacuzzi captures from unmerged PR 12 were recovered into `tests/fixtures/captures/unencrypted/` but are not decoded. | They evidence the `plain` codec non-goal; no J235 relevance. |

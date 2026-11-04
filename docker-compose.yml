@@ -1,12 +1,13 @@
-version: "3.8"
-
 services:
   spa2mqtt:
     build: .
     container_name: spa2mqtt
     restart: unless-stopped
+    volumes:
+      - ./config.yml:/app/config.yml:ro
     environment:
-      - PYTHONUNBUFFERED=1
-      - VARIANT_DEFINITION=${VARIANT_DEFINITION}
-      - SPA_IP=${SPA_IP}
-      - SPA_PORT=${SPA_PORT}
+      # Optional overrides; config.yml is preferred.
+      - SPA_IP=${SPA_IP:-}
+      - SPA_PORT=${SPA_PORT:-}
+      - SPA_TRANSMIT=${SPA_TRANSMIT:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }} (lint, types, tests incl. C++ core)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: python -m spa2mqtt validate
+      - run: python tools/gen_esphome_package.py --check
+      - run: pytest -q
+
+  esphome:
+    name: ESPHome component (config + compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            esphome/tests/.esphome
+          key: esphome-${{ runner.os }}-${{ hashFiles('esphome/tests/ci-local.yaml') }}
+      - run: pip install esphome jsonschema
+      - run: esphome config esphome/tests/ci-local.yaml
+      - run: esphome compile esphome/tests/ci-local.yaml
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t spa2mqtt:ci .
+      - run: docker run --rm spa2mqtt:ci spa2mqtt validate

@@ -1,0 +1,189 @@
+# Jacuzzi J235 ("encrypted" / Sundance-style board).
+#
+# Every field cites docs/protocol.md section 5 (decoded byte d<n>) and carries the status
+# assigned there. Entity keys and names are the identities Home Assistant uses today:
+# changing a `key` changes the HA unique_id; changing a `name` changes the legacy
+# discovery topic. See docs/design.md section 8 before editing either.
+schema_version: 1
+id: jacuzzi_j235
+aliases: [jacuzzi_j235_encrypted]
+name: Jacuzzi J235
+manufacturer: Jacuzzi
+model: J235
+description: J-200 series, 2018 board, encrypted C4 status, read via EW11A or ESP32 UART.
+protocol: balboa_encrypted
+temperature_unit: C
+
+bus:
+  baud: 115200
+  client_mid: 0xBF
+  channel_request_magic: [0xF1, 0x73]
+  dormant_channel_threshold: 5
+
+status:
+  type: 0xC4
+  decode: fold
+  length: 16
+
+commands:
+  type: 0xCC
+  encode: cc_xor
+  buttons:
+    temp_up: 0x01
+    temp_down: 0x02
+    pump_1: 0x04
+    pump_2: 0x05
+    light: 0x12
+
+fields:
+  hour:
+    {byte: 0, xor: 0x06, status: confirmed, evidence: "protocol.md §5 d0; wall-clock check on D3-D6"}
+  minute:
+    {byte: 11, status: confirmed, evidence: "protocol.md §5 d11"}
+  day_of_week:
+    {byte: 2, mask: 0x07, status: confirmed, description: "0 = Sunday", evidence: "protocol.md §5 d2; five dated captures"}
+  day_of_month:
+    {byte: 7, shift: 3, status: confirmed, description: "Correct only for months 1-7: d7 = (day << 3) ^ month", evidence: "protocol.md §5 d7"}
+  month_low_bits:
+    {byte: 7, mask: 0x07, status: confirmed, description: "Low 3 bits of the month (month & 7)", evidence: "protocol.md §5 d7"}
+  year:
+    {byte: 9, offset: 2000, status: confirmed, evidence: "protocol.md §5 d9; D7 = 2026"}
+  water_temperature:
+    {byte: 5, xor: 0x02, scale: 0.5, status: confirmed, evidence: "protocol.md §5 d5; heating curve in D2"}
+  setpoint:
+    {byte: 8, scale: 0.5, status: confirmed, evidence: "protocol.md §5 d8; D7 38.5 -> 40.0 -> 38.5"}
+  heater:
+    {byte: 10, bit: 6, status: confirmed, evidence: "protocol.md §5 d10; D7 t~512.8, D2 rows 1-51"}
+  pump_1_running:
+    {byte: 1, bit: 6, status: confirmed, description: "Pump 1 at any speed (J235 circulates on pump 1 low)", evidence: "protocol.md §5 d1; D7 t~90-144"}
+  pump_1_high:
+    {byte: 2, bit: 4, status: confirmed, evidence: "protocol.md §5 d2; D7 t~119"}
+  pump_1_speed:
+    {byte: 2, shift: 3, mask: 0x03, map: {"0": "off", "1": "low", "2": "high"}, status: confirmed, evidence: "protocol.md §5 d2; D7 t~90/119/143"}
+  pump_2:
+    {byte: 1, bit: 2, status: confirmed, evidence: "protocol.md §5 d1; D7 t~181/196"}
+  manual_circulation:
+    {byte: 1, bit: 7, status: hypothesis, evidence: "protocol.md §5 d1 (SpaControl MANUAL_CIRC); never observed set"}
+  heat_demand:
+    {byte: 1, bit: 5, status: hypothesis, description: "Set between pump 1 low start and heater on", evidence: "protocol.md §5 d1; D7 t~496"}
+  set_mode:
+    {byte: 2, bit: 5, status: confirmed, description: "Topside temperature-set mode active", evidence: "protocol.md §5 d2; D7 t~210-215"}
+  display_state:
+    {byte: 13, status: confirmed, description: "Topside display/menu state code", evidence: "protocol.md §5 d13; D7, D4"}
+  secondary_value_raw:
+    {byte: 14, status: hypothesis, description: "Unknown counter; bit 5 is XORed with a pump-1 flag", evidence: "protocol.md §5 d14"}
+
+entities:
+  # --- sensors (legacy set; names define the legacy discovery topics) ---
+  - key: current_temperature
+    component: sensor
+    field: water_temperature
+    name: Current Water Temperature
+    icon: mdi:coolant-temperature
+    device_class: temperature
+    unit_of_measurement: "°C"
+    state_class: measurement
+    accuracy_decimals: 1
+  - key: setpoint_temperature
+    component: sensor
+    field: setpoint
+    name: Target Water Temperature
+    icon: mdi:target
+    device_class: temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+  - key: circulation_pump_status
+    component: binary_sensor
+    field: pump_1_running
+    name: Circulation Pump Status
+    description: Pump 1 running at any speed (the J235 circulates on pump 1 low).
+    icon: mdi:water-pump
+    device_class: running
+    entity_category: diagnostic
+  - key: secondary_pump_status
+    component: binary_sensor
+    field: pump_2
+    name: Secondary Pump Status
+    icon: mdi:water-pump
+    device_class: running
+    entity_category: diagnostic
+  - key: main_pump_status
+    component: binary_sensor
+    field: pump_1_high
+    name: Main Pump Status
+    description: Pump 1 on high speed (jets).
+    icon: mdi:water-pump
+    device_class: running
+    entity_category: diagnostic
+  - key: manual_circulation_call
+    component: binary_sensor
+    field: manual_circulation
+    name: Manual Circulation Call
+    icon: mdi:water-pump
+    device_class: running
+  - key: heater_active
+    component: binary_sensor
+    field: heater
+    name: Heater Active
+    icon: mdi:radiator
+    device_class: heat
+
+  # --- controls (transmit must be enabled for these to be available) ---
+  - key: temperature_increment
+    component: button
+    press: temp_up
+    name: Temperature Increment
+  - key: temperature_decrement
+    component: button
+    press: temp_down
+    name: Temperature Decrement
+  - key: pump_1_button
+    component: button
+    press: pump_1
+    name: Pump 1 Button
+  - key: pump_2_button
+    component: button
+    press: pump_2
+    name: Pump 2 Button
+  - key: light_button
+    component: button
+    press: light
+    name: Light Button
+    icon: mdi:lightbulb
+  - key: temperature_set_control
+    component: number
+    field: setpoint
+    name: Temperature Set Control
+    control: {type: stepper, up: temp_up, down: temp_down, set_mode_field: set_mode, confirm_frames: 3, max_attempts: 60}
+    min: 20
+    max: 40
+    step: 0.5
+    mode: slider
+
+  # --- new entities (not in the legacy set) ---
+  - key: pump_1_speed
+    component: text_sensor
+    field: pump_1_speed
+    name: Pump 1 Speed
+    icon: mdi:pump
+  - key: set_mode_active
+    component: binary_sensor
+    field: set_mode
+    name: Set Mode Active
+    icon: mdi:gesture-tap-button
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: display_state
+    component: sensor
+    field: display_state
+    name: Display State
+    icon: mdi:monitor
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: secondary_value_raw
+    component: sensor
+    field: secondary_value_raw
+    name: Secondary Value Raw
+    icon: mdi:thermometer-lines
+    entity_category: diagnostic
+    enabled_by_default: false

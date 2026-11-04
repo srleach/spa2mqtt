@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/srleach/spa2mqtt/definitions/tub-definition.schema.json",
+  "title": "spa2mqtt tub definition",
+  "description": "Describes one tub model: wire protocol family, status field map, buttons and the entities exposed to Home Assistant. Consumed by the Python bridge and by the ESPHome spa_bus component at compile time. See docs/design.md section 4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "name", "manufacturer", "model", "protocol", "temperature_unit", "status", "fields", "entities"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"$ref": "#/$defs/key"},
+    "aliases": {"type": "array", "items": {"$ref": "#/$defs/key"}, "uniqueItems": true},
+    "name": {"type": "string", "minLength": 1},
+    "manufacturer": {"type": "string", "minLength": 1},
+    "model": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+    "protocol": {
+      "description": "Codec family implemented in code. balboa_encrypted: 0x7E framing, CRC-8 0x07/0x02/0x02, pairwise-fold status, CC button encoding.",
+      "enum": ["balboa_encrypted"]
+    },
+    "temperature_unit": {"enum": ["C", "F"]},
+    "bus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "baud": {"type": "integer", "minimum": 1200},
+        "client_mid": {"$ref": "#/$defs/byte"},
+        "channel_request_magic": {"type": "array", "items": {"$ref": "#/$defs/byte"}, "minItems": 2, "maxItems": 2},
+        "dormant_channel_threshold": {"type": "integer", "minimum": 1, "maximum": 100}
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "decode", "length"],
+      "properties": {
+        "type": {"$ref": "#/$defs/byte"},
+        "decode": {"enum": ["fold"]},
+        "length": {"type": "integer", "minimum": 1, "maximum": 64}
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "encode", "buttons"],
+      "properties": {
+        "type": {"$ref": "#/$defs/byte"},
+        "encode": {"enum": ["cc_xor"]},
+        "buttons": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/key"},
+          "additionalProperties": {"$ref": "#/$defs/byte"}
+        }
+      }
+    },
+    "fields": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/key"},
+      "additionalProperties": {"$ref": "#/$defs/field"}
+    },
+    "entities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/entity"}
+    }
+  },
+  "$defs": {
+    "key": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,62}$"},
+    "byte": {"type": "integer", "minimum": 0, "maximum": 255},
+    "status": {"enum": ["confirmed", "inferred", "hypothesis"]},
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["byte", "status"],
+      "properties": {
+        "byte": {"type": "integer", "minimum": 0, "maximum": 63},
+        "length": {"type": "integer", "minimum": 1, "maximum": 4},
+        "xor": {"type": "integer", "minimum": 0},
+        "bit": {"type": "integer", "minimum": 0, "maximum": 31},
+        "shift": {"type": "integer", "minimum": 0, "maximum": 31},
+        "mask": {"type": "integer", "minimum": 1},
+        "scale": {"type": "number"},
+        "offset": {"type": "number"},
+        "invalid": {"type": "array", "items": {"type": "integer"}},
+        "map": {
+          "type": "object",
+          "propertyNames": {"pattern": "^[0-9]+$"},
+          "additionalProperties": {"type": "string"}
+        },
+        "status": {"$ref": "#/$defs/status"},
+        "evidence": {"type": "string"},
+        "description": {"type": "string"}
+      },
+      "not": {"anyOf": [
+        {"required": ["bit", "shift"]},
+        {"required": ["bit", "mask"]},
+        {"required": ["bit", "scale"]},
+        {"required": ["bit", "map"]},
+        {"required": ["map", "scale"]}
+      ]}
+    },
+    "entity_common": {
+      "type": "object",
+      "required": ["key", "component", "name"],
+      "properties": {
+        "key": {"$ref": "#/$defs/key"},
+        "name": {"type": "string", "minLength": 1},
+        "icon": {"type": "string", "pattern": "^mdi:[a-z0-9-]+$"},
+        "entity_category": {"enum": ["diagnostic", "config"]},
+        "enabled_by_default": {"type": "boolean"},
+        "description": {"type": "string"}
+      }
+    },
+    "entity": {
+      "oneOf": [
+        {
+          "allOf": [{"$ref": "#/$defs/entity_common"}],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "required": ["field"],
+          "properties": {
+            "component": {"const": "sensor"},
+            "field": {"$ref": "#/$defs/key"},
+            "device_class": {"type": "string"},
+            "unit_of_measurement": {"type": "string"},
+            "state_class": {"enum": ["measurement", "total", "total_increasing"]},
+            "accuracy_decimals": {"type": "integer", "minimum": 0, "maximum": 6}
+          }
+        },
+        {
+          "allOf": [{"$ref": "#/$defs/entity_common"}],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "required": ["field"],
+          "properties": {
+            "component": {"const": "binary_sensor"},
+            "field": {"$ref": "#/$defs/key"},
+            "device_class": {"type": "string"}
+          }
+        },
+        {
+          "allOf": [{"$ref": "#/$defs/entity_common"}],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "required": ["field"],
+          "properties": {
+            "component": {"const": "text_sensor"},
+            "field": {"$ref": "#/$defs/key"}
+          }
+        },
+        {
+          "allOf": [{"$ref": "#/$defs/entity_common"}],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "required": ["press"],
+          "properties": {
+            "component": {"const": "button"},
+            "press": {"$ref": "#/$defs/key"}
+          }
+        },
+        {
+          "allOf": [{"$ref": "#/$defs/entity_common"}],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "required": ["field", "control", "min", "max", "step"],
+          "properties": {
+            "component": {"const": "number"},
+            "field": {"$ref": "#/$defs/key"},
+            "control": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "up", "down"],
+              "properties": {
+                "type": {"const": "stepper"},
+                "up": {"$ref": "#/$defs/key"},
+                "down": {"$ref": "#/$defs/key"},
+                "confirm_frames": {"type": "integer", "minimum": 1, "maximum": 50},
+                "set_mode_field": {"$ref": "#/$defs/key", "description": "Bit field that is true while the panel is in temperature-set mode. When given, the controller knows the first press only enters set mode."},
+                "max_attempts": {"type": "integer", "minimum": 1, "maximum": 500}
+              }
+            },
+            "min": {"type": "number"},
+            "max": {"type": "number"},
+            "step": {"type": "number", "exclusiveMinimum": 0},
+            "mode": {"enum": ["auto", "box", "slider"]},
+            "device_class": {"type": "string"},
+            "unit_of_measurement": {"type": "string"}
+          }
+        }
+      ]
+    }
+  }
+}

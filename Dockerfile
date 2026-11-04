@@ -1,23 +1,13 @@
-# Use a lightweight Python image
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONUNBUFFERED=1
 
-# Set workdir to root of the project
 WORKDIR /app
+COPY pyproject.toml README.md ./
+COPY spa2mqtt ./spa2mqtt
+COPY definitions ./definitions
+RUN pip install --no-cache-dir .
 
-# Install system dependencies (if needed)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Copy the project into the container
-COPY . /app
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Default command
-CMD ["python", "spa2mqtt/main.py"]
+# config.yml is read from the working directory; mount it at /app/config.yml.
+CMD ["spa2mqtt", "run", "-c", "/app/config.yml"]

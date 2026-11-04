@@ -1,0 +1,48 @@
+# CI-only variant of example-jacuzzibridge-esp.yaml using the components and package from this
+# checkout. Run from the repo root:  esphome config esphome/tests/ci-local.yaml
+esphome:
+  name: spa-bus-ci
+  friendly_name: Jacuzzi J235
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: arduino
+
+wifi:
+  ssid: ci
+  password: ci-password
+
+logger:
+  baud_rate: 0
+
+api:
+  encryption:
+    key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+
+ota:
+  - platform: esphome
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [spa_bus]
+
+packages:
+  spa_entities: !include ../packages/jacuzzi_j235.yaml
+
+uart:
+  - id: spa_uart
+    tx_pin: GPIO17
+    rx_pin: GPIO18
+    baud_rate: 115200
+
+spa_bus:
+  id: spa
+  uart_id: spa_uart
+  definition: jacuzzi_j235
+  transmit: true          # compile the transmit path too
+  flow_control_pin: GPIO21
+  bus_state:
+    name: Bus State

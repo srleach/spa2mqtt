@@ -176,3 +176,6 @@ cython_debug/
 # Ignore a config.yml if present
 config.yml
 *-debug_messages.csv
+
+# Capture fixtures are test data, keep them despite the *.log / *.csv ignores above
+!tests/fixtures/captures/**

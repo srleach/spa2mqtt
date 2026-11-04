@@ -70,6 +70,20 @@ def load_definition(name_or_path: str | Path) -> TubDefinition:
     return parse_definition(raw, source=str(path))
 
 
+def _keystream(status: dict[str, Any], length: int, source: str) -> bytes | None:
+    """S[i] = xor ^ ((start - i + adjust[i]) mod 64); S[0] = 0 (the key position)."""
+    if status["decode"] != "decrypt":
+        return None
+    ks = status.get("keystream")
+    if ks is None:
+        raise DefinitionError(f"{source}: status.decode 'decrypt' needs status.keystream")
+    adjust = {int(k): int(v) for k, v in ks.get("adjust", {}).items()}
+    out = bytearray(length)
+    for i in range(1, length):
+        out[i] = ks["xor"] ^ ((ks["start"] - i + adjust.get(i, 0)) % 64)
+    return bytes(out)
+
+
 def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
     try:
         jsonschema.validate(raw, _schema())
@@ -79,6 +93,8 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
 
     status = raw["status"]
     length = int(status["length"])
+    if "fold_template" in status and len(status["fold_template"]) // 2 != length:
+        raise DefinitionError(f"{source}: status.fold_template must be {length} bytes")
     fields: dict[str, FieldDef] = {}
     for key, f in raw["fields"].items():
         fd = FieldDef(
@@ -209,6 +225,9 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
         temperature_unit=raw["temperature_unit"],
         status_type=status["type"],
         status_length=length,
+        status_decode=status["decode"],
+        fold_template=bytes.fromhex(status["fold_template"]) if "fold_template" in status else None,
+        status_stream=_keystream(status, length, source),
         command_type=commands["type"] if commands else None,
         buttons=buttons,
         fields=fields,

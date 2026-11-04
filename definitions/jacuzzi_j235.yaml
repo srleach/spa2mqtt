@@ -1,9 +1,10 @@
 # Jacuzzi J235 ("encrypted" / Sundance-style board).
 #
-# Every field cites docs/protocol.md section 5 (decoded byte d<n>) and carries the status
-# assigned there. Entity keys and names are the identities Home Assistant uses today:
-# changing a `key` changes the HA unique_id; changing a `name` changes the legacy
-# discovery topic. See docs/design.md section 8 before editing either.
+# The status payload is decrypted once (status.decode: decrypt): the per-frame key payload[0]
+# and a fixed key stream are removed, and every field then reads plaintext (docs/protocol.md §3.3). Every
+# field cites the protocol document and carries the status assigned there. Entity keys and names
+# are the identities Home Assistant uses today: changing a `key` changes the HA unique_id;
+# changing a `name` changes the legacy discovery topic. See docs/design.md §8 before editing.
 schema_version: 1
 id: jacuzzi_j235
 aliases: [jacuzzi_j235_encrypted]
@@ -22,8 +23,14 @@ bus:
 
 status:
   type: 0xC4
-  decode: fold
-  length: 16
+  decode: decrypt
+  length: 33
+  # S[i] = 0x19 ^ ((31 - i + adjust[i]) mod 64). The base is pyjacuzzi's decrypt(); the four
+  # adjustments were calibrated against wall clock and topside readings (protocol.md §3.3).
+  keystream: {xor: 0x19, start: 31, adjust: {"5": -8, "14": -8, "15": -8, "22": -8}}
+  # Unkeyed J235 payload from 16 May 2025 (D1). Only used to rebuild frames from legacy
+  # fold-only logs (the decoded CSV fixtures).
+  fold_template: "000c04050a0e77f30b0f400f321390145a17140c1a1b3b19af1f1c504363202126"
 
 commands:
   type: 0xCC
@@ -36,42 +43,45 @@ commands:
     light: 0x12
 
 fields:
+  # byte = plaintext payload index (1..32), see protocol.md §3.3.
   hour:
-    {byte: 0, xor: 0x06, status: confirmed, evidence: "protocol.md §5 d0; wall-clock check on D3-D6"}
+    {byte: 1, status: confirmed, evidence: "protocol.md §3.3; wall clock D3-D6; pyjacuzzi labelled frame"}
   minute:
-    {byte: 11, status: confirmed, evidence: "protocol.md §5 d11"}
+    {byte: 22, status: confirmed, evidence: "protocol.md §3.3; wall clock D3-D6; pyjacuzzi labelled frame"}
   day_of_week:
-    {byte: 2, mask: 0x07, status: confirmed, description: "0 = Sunday", evidence: "protocol.md §5 d2; five dated captures"}
+    {byte: 5, mask: 0x07, status: confirmed, description: "0 = Sunday", evidence: "protocol.md §3.3; five dated J235 captures, three foreign frames"}
   day_of_month:
-    {byte: 7, shift: 3, status: confirmed, description: "Correct only for months 1-7: d7 = (day << 3) ^ month", evidence: "protocol.md §5 d7"}
-  month_low_bits:
-    {byte: 7, mask: 0x07, status: confirmed, description: "Low 3 bits of the month (month & 7)", evidence: "protocol.md §5 d7"}
+    {byte: 14, shift: 3, status: confirmed, evidence: "protocol.md §3.3; D1 16 May, D7 4 Nov, foreign frames"}
+  month:
+    {byte: 15, mask: 0x0F, status: confirmed, evidence: "protocol.md §3.3; D1 May, D7 November, foreign frames"}
   year:
-    {byte: 9, offset: 2000, status: confirmed, evidence: "protocol.md §5 d9; D7 = 2026"}
+    {byte: 19, offset: 2000, status: confirmed, evidence: "protocol.md §3.3; 2025, 2026 (J235), 2022, 2023 (foreign)"}
   water_temperature:
-    {byte: 5, xor: 0x02, scale: 0.5, status: confirmed, evidence: "protocol.md §5 d5; heating curve in D2"}
+    {byte: 10, scale: 0.5, status: confirmed, evidence: "protocol.md §3.3, §5 d5; D7 display 38.5"}
   setpoint:
-    {byte: 8, scale: 0.5, status: confirmed, evidence: "protocol.md §5 d8; D7 38.5 -> 40.0 -> 38.5"}
+    {byte: 16, scale: 0.5, status: confirmed, evidence: "protocol.md §3.3, §5 d8; D7 38.5 -> 40.0 -> 38.5"}
   heater:
-    {byte: 10, bit: 6, status: confirmed, evidence: "protocol.md §5 d10; D7 t~512.8, D2 rows 1-51"}
+    {byte: 21, bit: 6, status: confirmed, evidence: "protocol.md §3.3, §5 d10; D7 t~512.8, D2 rows 1-51"}
   pump_1_running:
-    {byte: 1, bit: 6, status: confirmed, description: "Pump 1 at any speed (J235 circulates on pump 1 low)", evidence: "protocol.md §5 d1; D7 t~90-144"}
+    {byte: 2, bit: 6, status: confirmed, description: "Pump 1 at any speed (J235 circulates on pump 1 low)", evidence: "protocol.md §3.3, §5 d1; D7 t~90-144"}
   pump_1_high:
-    {byte: 2, bit: 4, status: confirmed, evidence: "protocol.md §5 d2; D7 t~119"}
+    {byte: 5, bit: 4, status: confirmed, evidence: "protocol.md §3.3, §5 d2; D7 t~119"}
   pump_1_speed:
-    {byte: 2, shift: 3, mask: 0x03, map: {"0": "off", "1": "low", "2": "high"}, status: confirmed, evidence: "protocol.md §5 d2; D7 t~90/119/143"}
+    {byte: 5, shift: 3, mask: 0x03, map: {"0": "off", "1": "low", "2": "high"}, status: confirmed, evidence: "protocol.md §3.3, §5 d2; D7 t~90/119/143"}
   pump_2:
-    {byte: 1, bit: 2, status: confirmed, evidence: "protocol.md §5 d1; D7 t~181/196"}
+    {byte: 3, bit: 2, status: confirmed, evidence: "protocol.md §3.3, §5 d1; D7 t~181/196"}
   manual_circulation:
-    {byte: 1, bit: 7, status: hypothesis, evidence: "protocol.md §5 d1 (SpaControl MANUAL_CIRC); never observed set"}
+    {byte: 2, bit: 7, status: hypothesis, evidence: "protocol.md §5 d1 (SpaControl MANUAL_CIRC); never observed set; byte assumed"}
   heat_demand:
-    {byte: 1, bit: 5, status: hypothesis, description: "Set between pump 1 low start and heater on", evidence: "protocol.md §5 d1; D7 t~496"}
+    {byte: 2, bit: 5, status: hypothesis, description: "Set between pump 1 low start and heater on", evidence: "protocol.md §5 d1; D7 t~496"}
   set_mode:
-    {byte: 2, bit: 5, status: confirmed, description: "Topside temperature-set mode active", evidence: "protocol.md §5 d2; D7 t~210-215"}
+    {byte: 5, bit: 5, status: confirmed, description: "Topside temperature-set mode active", evidence: "protocol.md §3.3, §7a; D7"}
   display_state:
-    {byte: 13, status: confirmed, description: "Topside display/menu state code", evidence: "protocol.md §5 d13; D7, D4"}
+    {byte: 26, status: confirmed, description: "0 normal screen, 1 temperature-set screen", evidence: "protocol.md §3.3; D7"}
+  display_aux:
+    {byte: 27, status: hypothesis, description: "Display or alert code: 0x4D in May 2025, 0x99 in Nov 2026 (the old fold 'display state')", evidence: "protocol.md §3.3"}
   secondary_value_raw:
-    {byte: 14, status: hypothesis, description: "Unknown counter; bit 5 is XORed with a pump-1 flag", evidence: "protocol.md §5 d14"}
+    {byte: 28, status: hypothesis, description: "Unknown counter (the pump-1 flag is a separate byte now)", evidence: "protocol.md §3.3, §5 d14"}
 
 entities:
   # --- sensors (legacy set; names define the legacy discovery topics) ---

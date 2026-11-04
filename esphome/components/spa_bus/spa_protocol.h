@@ -58,6 +58,10 @@ class FrameDecoder {
 
 // Status payload fold: d[j] = p[2j] ^ p[2j+1] ^ 1. Returns decoded length.
 size_t fold(const uint8_t *payload, size_t len, uint8_t *out);
+// Remove the per-frame key: out[i] = p[i] ^ p[0] (out[0] = 0). Returns len. protocol.md §3.3.
+size_t unkey(const uint8_t *payload, size_t len, uint8_t *out);
+
+enum class StatusDecode : uint8_t { FOLD, UNKEY, DECRYPT };
 void cc_encode(uint8_t code, uint8_t key, uint8_t out[2]);
 int cc_decode(const uint8_t *payload, size_t len);  // -1 if too short
 
@@ -179,11 +183,14 @@ inline FieldDef make_field(uint8_t byte, uint8_t length, uint32_t xor_, int8_t b
 // SpaBus (ESPHome) and the host test both drive this class.
 class SpaCore {
  public:
-  void set_status_type(uint8_t type, uint8_t length) {
+  void set_status_type(uint8_t type, uint8_t length, StatusDecode decode = StatusDecode::FOLD) {
     status_type_ = type;
     status_length_ = length;
+    status_decode_ = decode;
   }
   void set_command_type(uint8_t type) { bus.config.command_type = type; }
+  // DECRYPT: plain[i] = unkeyed[i] ^ stream[i] (protocol.md §3.3).
+  void set_status_stream(std::vector<uint8_t> stream) { status_stream_ = std::move(stream); }
   void set_bus_params(uint8_t mid, uint8_t m0, uint8_t m1, uint16_t threshold) {
     bus.config.client_mid = mid;
     bus.config.magic[0] = m0;
@@ -204,8 +211,15 @@ class SpaCore {
     auto out = bus.handle(f);
     tx.insert(tx.end(), out.begin(), out.end());
     if (f.type != status_type_ || f.mid != 0xAF) return false;
-    uint8_t decoded[MAX_PAYLOAD / 2 + 1];
-    const size_t n = fold(f.payload, f.payload_len, decoded);
+    uint8_t decoded[MAX_PAYLOAD];
+    size_t n;
+    if (status_decode_ == StatusDecode::FOLD) {
+      n = fold(f.payload, f.payload_len, decoded);
+    } else {
+      n = unkey(f.payload, f.payload_len, decoded);
+      if (status_decode_ == StatusDecode::DECRYPT)
+        for (size_t i = 0; i < n && i < status_stream_.size(); i++) decoded[i] ^= status_stream_[i];
+    }
     if (n < status_length_) {
       bad_status_frames++;
       return false;
@@ -245,6 +259,8 @@ class SpaCore {
  private:
   uint8_t status_type_{0xC4};
   uint8_t status_length_{16};
+  StatusDecode status_decode_{StatusDecode::FOLD};
+  std::vector<uint8_t> status_stream_;
 };
 
 }  // namespace spa_proto

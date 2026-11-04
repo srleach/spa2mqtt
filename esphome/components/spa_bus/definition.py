@@ -98,12 +98,23 @@ def button_code(defn: dict[str, Any], button: str) -> int:
     return int(defn["commands"]["buttons"][button])
 
 
+def keystream(defn: dict[str, Any]) -> list[int]:
+    """S[i] = xor ^ ((start - i + adjust[i]) mod 64), S[0] = 0. Mirrors spa2mqtt's loader."""
+    status = defn["status"]
+    ks = status["keystream"]
+    adjust = {int(k): int(v) for k, v in ks.get("adjust", {}).items()}
+    return [0] + [ks["xor"] ^ ((ks["start"] - i + adjust.get(i, 0)) % 64) for i in range(1, status["length"])]
+
+
 def cpp_setup_lines(defn: dict[str, Any], var: str = "spa") -> list[str]:
     """C++ statements that load the definition into a SpaBus/SpaCore. Used by the host test
     generator; the ESPHome codegen emits the same calls through cg.add()."""
     lines = [
-        f"{var}->set_status_type({defn['status']['type']}, {defn['status']['length']});",
+        f"{var}->set_status_type({defn['status']['type']}, {defn['status']['length']}, "
+        f"spa_proto::StatusDecode::{defn['status']['decode'].upper()});",
     ]
+    if defn["status"]["decode"] == "decrypt":
+        lines.append(f"{var}->set_status_stream({{{', '.join(f'0x{b:02X}' for b in keystream(defn))}}});")
     if "commands" in defn:
         lines.append(f"{var}->set_command_type({defn['commands']['type']});")
     bus = defn.get("bus", {})

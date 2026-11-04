@@ -60,8 +60,12 @@ class SpaNumber : public number::Number {
 class SpaBus : public Component, public uart::UARTDevice {
  public:
   // --- configuration, emitted by codegen from the tub definition ---
-  void set_status_type(uint8_t type, uint8_t length) { core_.set_status_type(type, length); }
+  void set_status_type(uint8_t type, uint8_t length,
+                       spa_proto::StatusDecode decode = spa_proto::StatusDecode::FOLD) {
+    core_.set_status_type(type, length, decode);
+  }
   void set_command_type(uint8_t type) { core_.set_command_type(type); }
+  void set_status_stream(std::vector<uint8_t> stream) { core_.set_status_stream(std::move(stream)); }
   void set_bus_params(uint8_t mid, uint8_t m0, uint8_t m1, uint16_t threshold) {
     core_.set_bus_params(mid, m0, m1, threshold);
   }

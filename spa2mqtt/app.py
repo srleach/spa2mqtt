@@ -25,7 +25,7 @@ def make_transport(cfg: AppConfig, definition: TubDefinition) -> Transport:
     if t.type == "serial":
         return SerialTransport(t.device, t.baud or definition.bus.baud)
     if t.type == "replay":
-        return ReplayTransport(t.path, speed=t.speed, status_type=definition.status_type)
+        return ReplayTransport(t.path, speed=t.speed, definition=definition)
     raise ValueError(f"unknown transport type {t.type!r}")
 
 

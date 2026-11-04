@@ -6,7 +6,6 @@ import logging
 from collections.abc import Callable
 
 from ..definitions.model import ButtonEntity, FieldValue, NumberEntity, TubDefinition
-from ..protocol.cipher import fold
 from ..protocol.frame import Frame
 from ..transport.base import TransmitForbidden
 from .bus import BusClient
@@ -53,7 +52,7 @@ class Tub:
     def on_frame(self, frame: Frame) -> list[Frame]:
         out = self.bus.handle(frame)
         if frame.type == self.definition.status_type and frame.mid == BOARD_MID:
-            decoded = fold(frame.payload)
+            decoded = self.definition.decode_payload(frame.payload)
             if len(decoded) < self.definition.status_length:
                 self.bad_status_frames += 1
                 return out

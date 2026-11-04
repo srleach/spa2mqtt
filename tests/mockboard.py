@@ -9,9 +9,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from spa2mqtt.protocol import Frame, cc_decode, cc_encode, unfold
+from spa2mqtt.definitions import load_definition
+from spa2mqtt.protocol import Frame, cc_decode, cc_encode, decrypt, rekey
 
 TOPSIDE = 0x10
+# Unkeyed J235 payload (D1), the base the mock writes its per-byte fields into.
+TEMPLATE = bytes.fromhex("000c04050a0e77f30b0f400f321390145a17140c1a1b3b19af1f1c504363202126")
+_STREAM = load_definition("jacuzzi_j235").status_stream
+assert _STREAM is not None
+PLAIN_TEMPLATE = decrypt(TEMPLATE, _STREAM)  # TEMPLATE has key 0, so decrypt == unkey ^ stream
 
 
 @dataclass
@@ -31,14 +37,18 @@ class MockBoard:
     cycles: int = 0
 
     def status(self) -> Frame:
-        d = bytearray(16)
-        d[0] = 21 ^ 6
-        d[1] = (0x40 if self.pump1 else 0) | (0x04 if self.pump2 else 0)
-        d[2] = 3 | (self.pump1 << 3) | (0x20 if self.set_mode_frames else 0)
-        d[5] = self.water_raw ^ 2
-        d[8] = self.setpoint_raw
-        d[9] = 26
-        return Frame(0xFF, 0xAF, 0xC4, unfold(bytes(d), key=0x5A))
+        """A J235 status frame built from plaintext (docs/protocol.md §3.3)."""
+        p = bytearray(PLAIN_TEMPLATE)
+        p[1] = 21  # hour
+        p[2] = (p[2] & ~0x40) | (0x40 if self.pump1 else 0)  # pump 1 running
+        p[3] = (p[3] & ~0x04) | (0x04 if self.pump2 else 0)  # pump 2
+        p[5] = 3 | (self.pump1 << 3) | (0x20 if self.set_mode_frames else 0)
+        p[10] = self.water_raw
+        p[16] = self.setpoint_raw
+        p[19] = 26
+        assert _STREAM is not None
+        unkeyed = bytes(a ^ b for a, b in zip(p, _STREAM, strict=True))
+        return Frame(0xFF, 0xAF, 0xC4, rekey(unkeyed, key=0x5A))
 
     def cycle(self) -> list[Frame]:
         """One bus cycle: a CTS (and the topside's idle reply) per polled channel, a 0x00, a status."""

@@ -19,6 +19,7 @@ The protocol facts themselves live in `protocol.md`.
 | `Iraithium/sundance-rs485-controller` @ `f444c9b` | Existing ESPHome external component for Sundance (encrypted) boards: frame sizes 5–64, 115200 8N1, DE/RE timing, retry limits | Uses HJ's older field map. Good prior art for on-device feasibility. No code copied. |
 | `al1505/ALs-HA-SundanceMarin` @ `8bb04fb` | CRC variant claim (equivalent), 500 ms command spacing | Non-encrypted Sundance. |
 | Not relevant | `dewbot6/esphome-jacuzzi-j300` (different, non-Balboa panel bus); `ezeek/jacuzzi-mqtt-bridge` (copy of PJ) | – |
+| **Owner raw capture D7** (2026-11-04, `tools/capture.py`, receive-only, labelled) | 51 242 frames of every message type with 37 action labels. Settles the pump bits, button codes, set-mode behaviour, lights layout, heating sequence, bus population and cadence | Highest-value evidence. Labels are typed shortly after each action. |
 | Home Assistant (read-only, 2026-11-04) | Entity registry (unique_ids), device record, ESPHome device configs | Two entities (`heater_active`, `manual_circulation_call`) exist in HA but not in git. |
 
 ## Conflicts and resolutions
@@ -30,11 +31,15 @@ The protocol facts themselves live in `protocol.md`.
 | 3 | **Byte d10.** Legacy debug map: heater bit 6. PR 17: "pump status 0/64/128/192". | Bit 6 = heater (set only below setpoint). Bit 7 = unknown, probably auto circulation (HJ upstream). | D2 timeline |
 | 4 | **Byte d14.** PR 17: hour. SC README: bit 0 = °C flag. HJ: secondary temperature. | Hour and °C flag refuted. Secondary temperature kept as a hypothesis. | D2: values 22–27 at 20–21 h; bit 0 toggles without a unit change |
 | 5 | **Circulation bit.** SC: d1 bit 6. HJ upstream: d4 bit 6. | d1 bit 6 for J235 (d4 is constant 0x05 on J235 even while circulating). | D2 |
-| 6 | **Month.** HJ upstream: `f7&7` "cannot be right" (read 1 in August). | HJ's tub believed it was January 19 at the time, so its own data is consistent with `f7&7` = month. Still unresolved for months 8–12 (three bits). | HJ `DECODING.md` §3.3; D2–D6 |
+| 6 | **Month.** HJ upstream: `f7&7` "cannot be right" (read 1 in August). | Resolved: `d7 = (day << 3) XOR month` (4-bit month). It fits May (D1–D6), HJ's "January 19" and D7's 4 November (0x2B). For months 8–12, day bit 0 and month bit 3 collide in the fold, so the fold alone cannot decode dates then. | HJ `DECODING.md` §3.3; D2–D7 |
 | 7 | **Day of week.** PJ: Model A `P[20] & 7` ("not sure"). | Folded `d2 & 7` (Sunday = 0) on J235, matching four dated captures. Third-party frames are off by one, so J235-only. | `analyze_captures.py clock` |
 | 8 | **Is 0x16 encrypted?** Legacy S2M and SC route 0x16/0x23 to the XOR decoder. | No. 0x16/0x17/0x23 are the plaintext Jacuzzi protocol; the J235 does not use them. The rewrite does not decode them as encrypted. | PJ L1617–1665; HJ upstream removal |
 | 9 | **ClearRay code.** PJ docs 0x0E; HJ/JB 0x0F. | 0x0F (two independent sources; PJ text is internally inconsistent). Not exposed until confirmed on J235. | protocol.md §3.3 |
-| 10 | **Status cadence.** "About every minute" (issue paraphrase) vs "very high rate" (PJ). | ≈ 3.3 Hz on J235. | D2: 200 rows per full minute |
+| 10 | **Status cadence.** "About every minute" (issue paraphrase) vs "very high rate" (PJ). | ≈ 3.3 Hz on J235. | D7: 1 804 C4 in 541 s; D2: 200 rows per full minute |
+| 12 | **Pump bits.** Legacy definition: main pump = d2 bit 4, secondary = d1 bit 2, circulation = d1 bit 6. PJ: pump 1 is 2 bits. | All three legacy bits are right, but their meaning is narrower: d1.6 = pump 1 running (any speed); d2 bits 4–3 = pump 1 speed (bit 4 = high); d1.2 = pump 2. | D7 t≈90–196 |
+| 13 | **Light codes.** HJ: 0xF1 light on, 0xF2 colour. | The J235 topside has one light button that sends 0x12 (HJ 0xF2) and steps through the modes. 0x11 is never sent. | D7 t≈294–414 |
+| 14 | **First temp press.** Legacy: N presses for N half-degrees. | The first press only enters set mode (d2 bit 5, d13 0x98). The legacy controller was always one press short. | D7 t≈210, 238 |
+| 15 | **Dormant channel reuse.** HJ/IR rely on it. | Not possible on this install: the only polled channel (0x10, the topside) answers every CTS. A client must use the 0x00/0x01 request. | D7 census |
 | 11 | **`decoding.md` decoded values.** The doc's "post-decoding" lines all show minute 0x26. | The first 18 frames actually decode to minute 0x23; the doc copy-pasted the decode. Fixture keeps the raw frames, not the doc's decode. | `analyze_captures.py cipher` |
 
 ## Bugs found in prior code (for the record)
@@ -48,21 +53,23 @@ The protocol facts themselves live in `protocol.md`.
 
 ## Open questions
 
-1. Month encoding for August–December (capture in November pending).
-2. Pump 1 / pump 2 status bits and speed levels. No J235 dump has jets running.
-3. Manual circulation (d1 bit 7) and the meaning of d1 bit 5, d2 bit 3, d10 bit 7.
-4. d3 / d12 / d13: maintenance counters. Need the reminder values read from the topside
-   at capture time.
-5. d14 secondary temperature: unit and offset.
-6. CC on J235: confirm the panel channel(s), the idle code 0x00 and the button codes by
-   observing topside presses in a raw capture (receive-only).
-7. Channel assignment on J235 (0x00/0x01/0x02/0x03). Can only be tested by transmitting,
-   which is out of scope for development; the code path exists but is disabled by default.
-8. EW11A serial settings (expected 115200 8N1).
-9. Whether Model A or Model B reflects the real plaintext layout. A capture with values
-   changing in *both* bytes of a pair would decide it.
+Resolved by D7: pump bits and speeds, button codes, the lights layout, the panel channel,
+cadence, and the month encoding (explained, but not decodable for months 8–12 from the fold).
+
+1. Day/month for August–December: needs the true per-byte key stream (Model A corrected) or
+   another date source. Not needed by any entity.
+2. Manual circulation (d1 bit 7) and the meaning of d1 bit 5 (heat demand?) and d10 bit 7.
+3. d3 / d12 and the d13 code space: maintenance counters and display codes. Needs the reminder
+   values read from the topside menu during a capture.
+4. d14 underlying value (the pump-1 flag is understood).
+5. Channel assignment on J235 (0x00/0x01/0x02/0x03). Can only be tested by transmitting,
+   which is out of scope for development. The code path exists but is disabled by default.
+6. EW11A serial settings (expected 115200 8N1).
+7. Whether Model A or Model B reflects the real plaintext layout (d7 and d14 suggest the
+   fields are per-byte and the fold merges neighbours).
 
 ## Raw-capture request (sent to the owner)
 
-A receive-only capture using `tools/capture.py`, with labelled topside actions. The script is
-in `tools/capture.py`; the action list is in the PR description.
+A receive-only capture using `tools/capture.py`, with labelled topside actions. The result is D7
+(`tests/fixtures/captures/raw/2026-11-04T220754Z_j235_labelled.log`). A follow-up capture
+reading the maintenance reminder values from the menu would close question 3.

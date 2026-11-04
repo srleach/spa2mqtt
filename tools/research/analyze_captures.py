@@ -13,6 +13,8 @@ Sections:
     clock     hour/minute/day/month/day-of-week vs. capture wall-clock (decoded CSVs)
     profile   per-byte value histogram for each decoded CSV
     timeline  change-point timeline for each decoded CSV
+    census    frame counts by (addr, mid, type) for each raw capture
+    labelled  raw captures with MARK lines: C4/CA changes and panel button codes, interleaved
 """
 
 from __future__ import annotations
@@ -204,12 +206,87 @@ def section_timeline() -> None:
                 prev, start = key, i
 
 
+def _frames_with_time(path: Path) -> list[tuple[float, str, bytes]]:
+    """(timestamp, kind, data) where kind is 'MARK' (data=label) or 'FRAME' (data=raw frame)."""
+    out: list[tuple[float, str, bytes]] = []
+    buf = bytearray()
+    for line in path.read_text().splitlines():
+        line = line.split("#", 1)[0].strip()
+        parts = line.split(None, 2)
+        if len(parts) < 3:
+            continue
+        ts = float(parts[0])
+        if parts[1] == "MARK":
+            out.append((ts, "MARK", parts[2].encode()))
+            continue
+        buf += bytes.fromhex(parts[2])
+        i = 0
+        while i < len(buf) - 1:
+            if buf[i] == 0x7E and buf[i + 1] != 0x7E:
+                end = i + buf[i + 1] + 1
+                if end >= len(buf):
+                    break
+                if buf[end] == 0x7E and crc8_standard(bytes(buf[i + 1 : end - 1])) == buf[end - 1]:
+                    out.append((ts, "FRAME", bytes(buf[i : end + 1])))
+                    i = end
+                    continue
+            i += 1
+        del buf[:i]
+    return out
+
+
+def section_census() -> None:
+    print("== census: frames by (addr, mid, type)")
+    for log in sorted((CAPTURES / "raw").glob("*.log")):
+        c: Counter[tuple[int, int, int]] = Counter()
+        frames = [d for _, k, d in _frames_with_time(log) if k == "FRAME"]
+        for f in frames:
+            c[(f[2], f[3], f[4])] += 1
+        print(f"  {log.name}: {len(frames)} frames")
+        for (a, m, t), n in sorted(c.items()):
+            print(f"    addr=0x{a:02X} mid=0x{m:02X} type=0x{t:02X}: {n}")
+
+
+def section_labelled() -> None:
+    print("== labelled: changes only; CC lines show decoded button code payload[0]^payload[1]^0xE0")
+    for log in sorted((CAPTURES / "raw").glob("*.log")):
+        records = _frames_with_time(log)
+        if not any(k == "MARK" for _, k, _ in records):
+            continue
+        print(f"  -- {log.name}")
+        t0 = records[0][0]
+        last: dict[int, bytes] = {}
+        last_code = 0
+        for ts, kind, data in records:
+            t = ts - t0
+            if kind == "MARK":
+                print(f"   {t:7.1f}  MARK {data.decode()}")
+                continue
+            typ, body = data[4], data[5:-2]
+            if typ in (0xC4, 0xCA):
+                d = fold(body)
+                prev = last.get(typ)
+                if d != prev:
+                    tag = "d" if typ == 0xC4 else "c"
+                    diff = "" if prev is None else " ".join(
+                        f"{tag}{i}:{prev[i]:02x}->{d[i]:02x}" for i in range(len(d)) if d[i] != prev[i])
+                    print(f"   {t:7.1f}  {typ:02X} {d.hex(' ')}  {diff}")
+                    last[typ] = d
+            elif typ == 0xCC:
+                code = body[0] ^ body[1] ^ 0xE0
+                if code != last_code:
+                    print(f"   {t:7.1f}  CC ch=0x{data[2]:02X} code=0x{code:02X}")
+                    last_code = code
+
+
 SECTIONS = {
     "crc": section_crc,
     "cipher": section_cipher,
     "clock": section_clock,
     "profile": section_profile,
     "timeline": section_timeline,
+    "census": section_census,
+    "labelled": section_labelled,
 }
 
 if __name__ == "__main__":

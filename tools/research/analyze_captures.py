@@ -124,8 +124,10 @@ def section_crc() -> None:
         ok = sum(crc8_augmented(f[1:-2]) == f[-2] for _, f in frames)
         same = all(crc8_augmented(f[1:-2]) == crc8_standard(f[1:-2]) for _, f in frames)
         len_ok = all(f[1] == len(f) - 2 for _, f in frames)
-        print(f"  {log.name}: {len(frames)} frames, crc ok {ok}/{len(frames)}, "
-              f"formulations agree={same}, LEN==len(frame)-2: {len_ok}")
+        print(
+            f"  {log.name}: {len(frames)} frames, crc ok {ok}/{len(frames)}, "
+            f"formulations agree={same}, LEN==len(frame)-2: {len_ok}"
+        )
 
 
 def section_cipher() -> None:
@@ -169,10 +171,15 @@ def section_clock() -> None:
         hour, minute = first[0] ^ 6, first[11]
         day, month, dow, year = first[7] >> 3, first[7] & 7, first[2] & 7, first[9]
         epoch = _epoch_from_name(path.name)
-        wall = (dt.datetime.fromtimestamp(epoch, dt.timezone.utc).strftime("%Y-%m-%d %a %H:%M:%S UTC")
-                if epoch else "(no timestamp in name)")
-        print(f"  {path.name}: tub {hour:02d}:{minute:02d} day={day} month={month} "
-              f"dow(b2&7)={dow} year(b9)={year}  | file wall-clock {wall}")
+        wall = (
+            dt.datetime.fromtimestamp(epoch, dt.UTC).strftime("%Y-%m-%d %a %H:%M:%S UTC")
+            if epoch
+            else "(no timestamp in name)"
+        )
+        print(
+            f"  {path.name}: tub {hour:02d}:{minute:02d} day={day} month={month} "
+            f"dow(b2&7)={dow} year(b9)={year}  | file wall-clock {wall}"
+        )
 
 
 def section_profile() -> None:
@@ -200,9 +207,11 @@ def section_timeline() -> None:
             if key != prev:
                 if prev is not None:
                     x = rows[start]
-                    print(f"   rows {start + 1:5d}-{i:5d} tub {x[0] ^ 6:02d}:{x[11]:02d} "
-                          f"b1={x[1]:08b} b2={x[2]:08b} b3={x[3]:3d} b5={x[5]:3d}(^2/2={(x[5] ^ 2) / 2}) "
-                          f"b8={x[8]} b10={x[10]:08b} b13={x[13]:3d} b14={x[14]:3d} b15={x[15]}")
+                    print(
+                        f"   rows {start + 1:5d}-{i:5d} tub {x[0] ^ 6:02d}:{x[11]:02d} "
+                        f"b1={x[1]:08b} b2={x[2]:08b} b3={x[3]:3d} b5={x[5]:3d}(^2/2={(x[5] ^ 2) / 2}) "
+                        f"b8={x[8]} b10={x[10]:08b} b13={x[13]:3d} b14={x[14]:3d} b15={x[15]}"
+                    )
                 prev, start = key, i
 
 
@@ -268,8 +277,11 @@ def section_labelled() -> None:
                 prev = last.get(typ)
                 if d != prev:
                     tag = "d" if typ == 0xC4 else "c"
-                    diff = "" if prev is None else " ".join(
-                        f"{tag}{i}:{prev[i]:02x}->{d[i]:02x}" for i in range(len(d)) if d[i] != prev[i])
+                    diff = (
+                        ""
+                        if prev is None
+                        else " ".join(f"{tag}{i}:{prev[i]:02x}->{d[i]:02x}" for i in range(len(d)) if d[i] != prev[i])
+                    )
                     print(f"   {t:7.1f}  {typ:02X} {d.hex(' ')}  {diff}")
                     last[typ] = d
             elif typ == 0xCC:

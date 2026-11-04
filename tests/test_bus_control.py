@@ -1,0 +1,109 @@
+"""Bus arbitration and setpoint control against the mock board. No real bus involved."""
+
+from __future__ import annotations
+
+import pytest
+
+from spa2mqtt.definitions import TubDefinition
+from spa2mqtt.transport import TransmitForbidden
+from spa2mqtt.tub import BusState, Tub
+
+from .mockboard import TOPSIDE, MockBoard
+
+
+def run(tub: Tub, board: MockBoard, cycles: int) -> None:
+    for _ in range(cycles):
+        pending = board.cycle()
+        while pending:
+            frame = pending.pop(0)
+            for out in tub.on_frame(frame):
+                pending[0:0] = board.receive(out)
+
+
+def test_transmit_disabled_refuses_everything(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=False)
+    with pytest.raises(TransmitForbidden):
+        tub.press("pump_1_button")
+    with pytest.raises(TransmitForbidden):
+        tub.set_number("temperature_set_control", 39.0)
+    board = MockBoard()
+    run(tub, board, 50)
+    assert board.assigned == [] and board.presses == []
+    assert tub.bus.state is BusState.LISTEN
+
+
+def test_no_claim_without_a_command(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard()
+    run(tub, board, 50)
+    assert board.assigned == []  # lazy: enabling transmit alone sends nothing
+    assert tub.bus.state is BusState.LISTEN
+
+
+def test_channel_request_then_press(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard()
+    run(tub, board, 10)
+    tub.press("pump_1_button")
+    run(tub, board, 10)
+    assert board.assigned == [0x11]
+    assert board.acked == [0x11]
+    assert board.presses == [(0x11, 0x04)]
+    assert tub.state.values["pump_1_speed"] == "low"
+
+
+def test_dormant_channel_is_reused(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard(polled=[TOPSIDE, 0x12])  # 0x12 polled but never answers
+    run(tub, board, 10)
+    tub.press("pump_2_button")
+    run(tub, board, 5)
+    assert board.assigned == []
+    assert board.presses == [(0x12, 0x05)]
+
+
+def test_setpoint_loop_handles_set_mode_and_converges(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard()
+    run(tub, board, 10)
+    assert tub.set_number("temperature_set_control", 40.0) == 40.0
+    run(tub, board, 80)
+    assert tub.state.values["setpoint"] == 40.0
+    codes = [c for _, c in board.presses]
+    assert codes == [0x01] * 4  # 1 press to enter set mode + 3 steps of 0.5 °C
+    assert tub.setpoints["temperature_set_control"].target is None
+
+
+def test_setpoint_loop_retries_lost_presses_and_clamps(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard(ignore_presses=2)
+    run(tub, board, 10)
+    assert tub.set_number("temperature_set_control", 12.0) == 20.0  # clamped to entity min
+    run(tub, board, 600)
+    assert tub.state.values["setpoint"] == 20.0
+
+
+def test_setpoint_loop_gives_up(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard(ignore_presses=10_000)
+    run(tub, board, 10)
+    tub.set_number("temperature_set_control", 39.0)
+    run(tub, board, 1000)
+    ctl = tub.setpoints["temperature_set_control"]
+    assert ctl.target is None
+    assert ctl.attempts == 60  # max_attempts from the definition
+
+
+def test_conflict_on_our_channel_releases_it(j235: TubDefinition) -> None:
+    from spa2mqtt.protocol import Frame, cc_encode
+
+    tub = Tub(j235, transmit=True)
+    board = MockBoard()
+    run(tub, board, 10)
+    tub.press("pump_1_button")
+    run(tub, board, 5)
+    assert tub.bus.channel == 0x11
+    tub.on_frame(Frame(0x11, 0xBF, 0x06))
+    tub.on_frame(Frame(0x11, 0xBF, 0xCC, cc_encode(0, key=1)))  # someone else answered our CTS
+    assert tub.bus.channel is None
+    assert tub.bus.state is BusState.LISTEN

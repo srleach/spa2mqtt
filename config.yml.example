@@ -1,10 +1,26 @@
 spa:
-  connection:
-    spa_address: "192.168.1.100"
-    spa_port: 8899
-  config: jacuzzi_j235_encrypted
+  definition: jacuzzi_j235          # see `spa2mqtt definitions`; legacy name jacuzzi_j235_encrypted works
+  transport:
+    type: tcp                       # tcp (EW11A etc.) | serial | replay
+    host: 192.168.1.100
+    port: 8899
+  # SAFETY: false = receive-only. Buttons and the setpoint number are shown as unavailable
+  # in Home Assistant until this is true. Nothing is ever sent at start-up either way.
+  transmit: false
+
 mqtt:
-  broker: "192.168.26.7"
+  broker: 192.168.1.7
   port: 1883
-  username: "user"
-  password: "pass"
+  username: user
+  password: pass
+
+ha:
+  discovery_prefix: homeassistant
+  device_name: Jacuzzi J235          # also determines the legacy discovery topics
+  device_identifier: "185569045"     # keep: this is the HA device the v1 bridge created
+  unique_id_prefix: ""               # "" keeps the v1 unique_ids; set e.g. "spa_" on a fresh install
+  legacy_topics: true                # publish discovery where v1 did, so configs are replaced in place
+  heartbeat: 60                      # re-publish unchanged values every N seconds
+  heartbeat_overrides:
+    secondary_pump_status: 90
+    circulation_pump_status: 90

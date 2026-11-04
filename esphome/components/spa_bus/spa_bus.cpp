@@ -22,8 +22,8 @@ void SpaNumber::control(float value) {
   if (this->parent_ != nullptr) this->parent_->set_setpoint(this->index_, value);
 }
 
-void SpaBus::register_setpoint(SpaNumber *n, size_t field, uint8_t up, uint8_t down, float step, float min,
-                               float max, uint16_t confirm_frames, uint16_t max_attempts) {
+void SpaBus::register_setpoint(SpaNumber *n, size_t field, int mode_field, uint8_t up, uint8_t down, float step,
+                               float min, float max, uint16_t confirm_frames, uint16_t max_attempts) {
   spa_proto::SetpointController sp;
   sp.up = up;
   sp.down = down;
@@ -33,7 +33,7 @@ void SpaBus::register_setpoint(SpaNumber *n, size_t field, uint8_t up, uint8_t d
   sp.confirm_frames = confirm_frames;
   sp.max_attempts = max_attempts;
   n->set_parent(this, this->core_.setpoints.size());
-  this->core_.setpoints.push_back({field, sp});
+  this->core_.setpoints.push_back({field, mode_field, sp});
   this->numbers_.push_back({field, n});
 }
 #endif
@@ -53,7 +53,7 @@ bool SpaBus::set_setpoint(size_t index, float value) {
     return false;
   }
   if (index >= this->core_.setpoints.size()) return false;
-  float target = this->core_.setpoints[index].second.set_target(value);
+  float target = this->core_.setpoints[index].ctl.set_target(value);
   ESP_LOGI(TAG, "setpoint target %.1f", target);
   return true;
 }

@@ -28,6 +28,7 @@ async def to_code(config):
         hub.register_setpoint(
             num,
             defs.field_index(defn, ent["field"]),
+            defs.field_index(defn, ctl["set_mode_field"]) if "set_mode_field" in ctl else -1,
             defs.button_code(defn, ctl["up"]),
             defs.button_code(defn, ctl["down"]),
             ent["step"],

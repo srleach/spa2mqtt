@@ -138,14 +138,19 @@ class SetpointController {
   float target{0.0f};
   uint16_t attempts{0};
 
+  uint16_t wake_presses{0};
+
   float set_target(float value);
   // Called on every status frame. Returns a button code to press, or -1.
-  int on_status(bool valid, float setpoint);
+  // set_mode: -1 = the tub has no set-mode field, 0/1 = its current value.
+  // press_queued: our last press has not been sent yet; do not judge it.
+  int on_status(bool valid, float setpoint, int set_mode = -1, bool press_queued = false);
 
  private:
   bool pending_{false};
   uint16_t wait_{0};
   float at_press_{0.0f};
+  int mode_at_press_{-1};
 };
 
 }  // namespace spa_proto
@@ -212,8 +217,13 @@ class SpaCore {
       values[i] = v;
     }
     for (auto &sp : setpoints) {
-      const FieldValue &v = values[sp.first];
-      const int code = sp.second.on_status(v.valid && v.kind == FieldKind::NUMBER, v.number);
+      const FieldValue &v = values[sp.field];
+      int mode = -1;
+      if (sp.mode_field >= 0) {
+        const FieldValue &m = values[static_cast<size_t>(sp.mode_field)];
+        if (m.valid && m.kind == FieldKind::BOOL) mode = m.b ? 1 : 0;
+      }
+      const int code = sp.ctl.on_status(v.valid && v.kind == FieldKind::NUMBER, v.number, mode, !bus.queue.empty());
       if (code >= 0) bus.enqueue_press(static_cast<uint8_t>(code));
     }
     return true;
@@ -222,7 +232,12 @@ class SpaCore {
   std::vector<FieldDef> fields;
   std::vector<FieldValue> values;
   std::vector<bool> changed;
-  std::vector<std::pair<size_t, SetpointController>> setpoints;
+  struct SetpointBinding {
+    size_t field;
+    int mode_field;  // -1 when the definition names no set-mode field
+    SetpointController ctl;
+  };
+  std::vector<SetpointBinding> setpoints;
   BusClient bus;
   uint32_t status_frames{0};
   uint32_t bad_status_frames{0};

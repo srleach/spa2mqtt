@@ -160,6 +160,11 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
             ctl = e["control"]
             need_button(ctl["up"])
             need_button(ctl["down"])
+            mode_field = ctl.get("set_mode_field")
+            if mode_field is not None:
+                need_field(mode_field)
+                if fields[mode_field].kind != "bool":
+                    raise DefinitionError(f"{source}: number {key!r} set_mode_field must be a bit field")
             if not e["min"] < e["max"]:
                 raise DefinitionError(f"{source}: number {key!r} needs min < max")
             entities.append(
@@ -171,6 +176,7 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
                         down=ctl["down"],
                         confirm_frames=ctl.get("confirm_frames", 3),
                         max_attempts=ctl.get("max_attempts", 40),
+                        set_mode_field=mode_field,
                     ),
                     min=float(e["min"]),
                     max=float(e["max"]),

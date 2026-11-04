@@ -107,3 +107,85 @@ def test_conflict_on_our_channel_releases_it(j235: TubDefinition) -> None:
     tub.on_frame(Frame(0x11, 0xBF, 0xCC, cc_encode(0, key=1)))  # someone else answered our CTS
     assert tub.bus.channel is None
     assert tub.bus.state is BusState.LISTEN
+
+
+def _without_set_mode_field(j235: TubDefinition) -> TubDefinition:
+    import dataclasses
+
+    from spa2mqtt.definitions import NumberEntity
+
+    ents = tuple(
+        dataclasses.replace(e, control=dataclasses.replace(e.control, set_mode_field=None))
+        if isinstance(e, NumberEntity)
+        else e
+        for e in j235.entities
+    )
+    return dataclasses.replace(j235, entities=ents)
+
+
+def _frames_to_target(definition: TubDefinition, target: float) -> tuple[int, list[int], int]:
+    tub = Tub(definition, transmit=True)
+    board = MockBoard()
+    run(tub, board, 10)
+    tub.set_number("temperature_set_control", target)
+    cycles = 0
+    while tub.setpoints["temperature_set_control"].target is not None and cycles < 400:
+        run(tub, board, 1)
+        cycles += 1
+    return cycles, [c for _, c in board.presses], tub.setpoints["temperature_set_control"].wake_presses
+
+
+def test_set_mode_aware_controller_uses_exactly_one_wake_press(j235: TubDefinition) -> None:
+    _, codes, wakes = _frames_to_target(j235, 40.0)
+    assert codes == [0x01] * 4  # 1 wake + 3 steps from 38.5 to 40.0
+    assert wakes == 1
+
+
+def test_set_mode_awareness_is_faster_than_retry_fallback(j235: TubDefinition) -> None:
+    aware, codes_aware, _ = _frames_to_target(j235, 40.0)
+    blind, codes_blind, wakes_blind = _frames_to_target(_without_set_mode_field(j235), 40.0)
+    assert codes_aware == codes_blind == [0x01] * 4  # both converge with the same presses
+    assert wakes_blind == 0  # without the field it cannot tell a wake press from a lost one
+    assert aware < blind
+
+
+def test_already_in_set_mode_needs_no_wake_press(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard()
+    run(tub, board, 10)
+    board.apply(0x01)  # someone at the topside just pressed Temp up: set mode is open
+    run(tub, board, 1)
+    assert tub.state.values["set_mode"] is True
+    tub.set_number("temperature_set_control", 39.0)
+    run(tub, board, 20)
+    assert [c for _, c in board.presses] == [0x01]
+    assert tub.state.values["setpoint"] == 39.0
+
+
+def test_set_mode_field_must_be_a_bit_field() -> None:
+    import copy
+
+    import pytest
+
+    from spa2mqtt.definitions import DefinitionError
+    from spa2mqtt.definitions.loader import parse_definition
+
+    from .test_definitions import _raw
+
+    raw = copy.deepcopy(_raw())
+    for e in raw["entities"]:
+        if e["component"] == "number":
+            e["control"]["set_mode_field"] = "water_temperature"
+    with pytest.raises(DefinitionError, match="bit field"):
+        parse_definition(raw)
+
+
+def test_slow_channel_grant_does_not_duplicate_presses(j235: TubDefinition) -> None:
+    for definition in (j235, _without_set_mode_field(j235)):
+        tub = Tub(definition, transmit=True)
+        board = MockBoard(new_client_poll_after=60)  # ~18 s before the board offers a channel
+        run(tub, board, 10)
+        tub.set_number("temperature_set_control", 39.5)
+        run(tub, board, 150)
+        assert [c for _, c in board.presses] == [0x01] * 3  # 1 wake + 2 steps, no extras
+        assert tub.state.values["setpoint"] == 39.5

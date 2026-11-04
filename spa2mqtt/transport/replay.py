@@ -39,6 +39,11 @@ class ReplayTransport:
             return rec.data
         return b""
 
+    @property
+    def current_time(self) -> float:
+        """Timestamp of the record most recently returned by read() (0 before the first)."""
+        return self._last_ts or 0.0
+
     async def write(self, data: bytes) -> None:
         self.writes_attempted += 1
         raise TransmitForbidden("replay transport is receive-only")

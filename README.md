@@ -44,6 +44,28 @@ spa2mqtt validate                          # validate all definitions
 spa2mqtt replay tests/fixtures/captures/raw/2026-11-04T220754Z_j235_labelled.log
 ```
 
+### Read-only check against the tub
+
+`spa2mqtt monitor` decodes the live bus and prints it to the terminal. It does not connect to
+MQTT, and it cannot transmit: the tub model runs receive-only, the module has no bus writer, and
+the transport is wrapped so that any write raises. Stop the v1 container first. It transmits at
+start-up, and the EW11A may accept only one TCP client.
+
+```bash
+git clone git@github.com:srleach/spa2mqtt.git && cd spa2mqtt
+git checkout claude/relaxed-turing-ic1k9p
+python3 -m venv .venv && . .venv/bin/activate && pip install -e .
+spa2mqtt monitor 192.168.25.73 --interval 10 --record monitor-session.log
+```
+
+You get a full report straight away, then one every `--interval` seconds. Each report has the
+latest raw status frame, the folded payload, every field with its evidence status, frame rates
+and checksum errors. In between, the monitor prints each change and each topside button press
+as it happens. Useful flags: `--describe` (field notes), `--quiet-changes`, `--json` (JSON
+lines), `--serial /dev/tty…` (USB RS485 adapter), `--replay FILE` (decode a capture instead).
+`--record` appends a raw capture in the `tools/capture.py` format, so a monitor session can be
+added to the test fixtures afterwards.
+
 ### Migrating from v1
 
 The v1 implementation is kept on branch `legacy/pre-rewrite`.

@@ -71,15 +71,25 @@ static int self_checks() {
   out = bus.handle(ours);
   CHECK(out.size() == 1 && out[0].type == 0xCC && cc_decode(out[0].payload, 2) == 0x04);
 
-  // Setpoint controller: first press only enters set mode.
+  // Setpoint controller without a set-mode field: the wake press is found by retrying.
   SetpointController sp;
   sp.minimum = 20; sp.maximum = 40; sp.step = 0.5f; sp.confirm_frames = 3; sp.max_attempts = 10;
   CHECK(sp.set_target(39.2f) == 39.0f);
   CHECK(sp.on_status(true, 38.5f) == 0x01);   // wake press
+  CHECK(sp.on_status(true, 38.5f, -1, true) == -1);  // still queued: countdown must not run
   CHECK(sp.on_status(true, 38.5f) == -1);
   CHECK(sp.on_status(true, 38.5f) == -1);
   CHECK(sp.on_status(true, 38.5f) == 0x01);   // retry -> step
   CHECK(sp.on_status(true, 39.0f) == -1 && !sp.has_target);
+
+  // With a set-mode field: the wake press is recognised and the step follows at once.
+  SetpointController sm = SetpointController();
+  sm.minimum = 20; sm.maximum = 40; sm.step = 0.5f; sm.confirm_frames = 3; sm.max_attempts = 10;
+  sm.set_target(39.0f);
+  CHECK(sm.on_status(true, 38.5f, 0) == 0x01);   // wake press
+  CHECK(sm.on_status(true, 38.5f, 1) == 0x01);   // set mode opened: step immediately
+  CHECK(sm.wake_presses == 1);
+  CHECK(sm.on_status(true, 39.0f, 1) == -1 && !sm.has_target);
   return 0;
 }
 

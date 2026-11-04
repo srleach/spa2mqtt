@@ -176,6 +176,7 @@
                 "up": {"$ref": "#/$defs/key"},
                 "down": {"$ref": "#/$defs/key"},
                 "confirm_frames": {"type": "integer", "minimum": 1, "maximum": 50},
+                "set_mode_field": {"$ref": "#/$defs/key", "description": "Bit field that is true while the panel is in temperature-set mode. When given, the controller knows the first press only enters set mode."},
                 "max_attempts": {"type": "integer", "minimum": 1, "maximum": 500}
               }
             },

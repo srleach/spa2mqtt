@@ -15,6 +15,7 @@ Sections:
     timeline  change-point timeline for each decoded CSV
     census    frame counts by (addr, mid, type) for each raw capture
     labelled  raw captures with MARK lines: C4/CA changes and panel button codes, interleaved
+    setmode   set-mode periods: indicator agreement, presses vs setpoint steps, timeout, other traffic
 """
 
 from __future__ import annotations
@@ -291,6 +292,63 @@ def section_labelled() -> None:
                     last_code = code
 
 
+def section_setmode() -> None:
+    """A press is a 0 -> temp-code transition in the panel's CC frames. A set-mode window
+    runs from the status frame where d2 bit 5 sets to the one where it clears."""
+    print("== setmode: d2 bit 5 periods in raw captures")
+    for log in sorted((CAPTURES / "raw").glob("*.log")):
+        records = [(ts, d) for ts, k, d in _frames_with_time(log) if k == "FRAME"]
+        if not any(f[4] == 0xCC for _, f in records):
+            continue
+        print(f"  -- {log.name}")
+        t0 = records[0][0]
+        agree: Counter[tuple[bool, int]] = Counter()
+        polls: dict[bool, list[int]] = {True: [], False: []}
+        other_in: Counter[tuple[int, int]] = Counter()
+        presses: list[tuple[float, int]] = []
+        windows: list[tuple[float, float, list[float]]] = []
+        mode, start, sps, cts, last_code = False, 0.0, [], 0, 0
+        for ts, f in records:
+            t, typ = ts - t0, f[4]
+            if typ == 0x06:
+                cts += 1
+            elif typ == 0xCC:
+                code = f[5] ^ f[6] ^ 0xE0
+                if code in (0x01, 0x02) and last_code == 0:
+                    presses.append((t, code))
+                last_code = code
+            elif typ == 0xC4:
+                d = fold(f[5:-2])
+                now = bool(d[2] & 0x20)
+                agree[(now, d[13])] += 1
+                polls[now].append(cts)
+                cts = 0
+                if now and not mode:
+                    start, sps = t, [d[8] / 2]
+                elif now and d[8] / 2 != sps[-1]:
+                    sps.append(d[8] / 2)
+                elif mode and not now:
+                    windows.append((start, t, sps))
+                mode = now
+            if mode and typ not in (0x06, 0xCC, 0xC4):
+                other_in[(f[2], typ)] += 1
+        print(f"   (set-mode bit, d13) pairs: {dict(agree)}")
+        for k in (True, False):
+            if polls[k]:
+                mean = sum(polls[k]) / len(polls[k])
+                print(f"   CTS polls per status frame, set_mode={k}: {mean:.2f} (n={len(polls[k])})")
+        print(f"   other frames during set mode (addr, type): {dict(other_in)}")
+        outside = [p for p in presses if not any(a <= p[0] <= b for a, b, _ in windows)]
+        print(f"   temp presses outside any window: {len(outside)}")
+        for a, b, sp in windows:
+            inside = [p for p in presses if a <= p[0] <= b]
+            last = max(p[0] for p in inside) if inside else a
+            print(
+                f"   t={a:6.1f}-{b:6.1f}: {len(inside)} presses -> {len(sp) - 1} setpoint steps {sp}; "
+                f"ended {b - last:.1f}s after last press"
+            )
+
+
 SECTIONS = {
     "crc": section_crc,
     "cipher": section_cipher,
@@ -299,6 +357,7 @@ SECTIONS = {
     "timeline": section_timeline,
     "census": section_census,
     "labelled": section_labelled,
+    "setmode": section_setmode,
 }
 
 if __name__ == "__main__":

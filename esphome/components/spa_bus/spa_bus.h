@@ -84,8 +84,8 @@ class SpaBus : public Component, public uart::UARTDevice {
   void register_binary_sensor(size_t field, binary_sensor::BinarySensor *s) { binary_sensors_.push_back({field, s}); }
 #endif
 #ifdef USE_NUMBER
-  void register_setpoint(SpaNumber *n, size_t field, uint8_t up, uint8_t down, float step, float min, float max,
-                         uint16_t confirm_frames, uint16_t max_attempts);
+  void register_setpoint(SpaNumber *n, size_t field, int mode_field, uint8_t up, uint8_t down, float step, float min,
+                         float max, uint16_t confirm_frames, uint16_t max_attempts);
 #endif
 
   // --- commands (no-ops with a warning unless transmit is enabled) ---

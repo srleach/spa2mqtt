@@ -38,6 +38,7 @@ class Tub:
                     maximum=e.max,
                     confirm_frames=e.control.confirm_frames,
                     max_attempts=e.control.max_attempts,
+                    press_queued=lambda: bool(self.bus.queue),
                 )
         self.bad_status_frames = 0
         hyp = [k for k, f in definition.fields.items() if f.status == "hypothesis"]
@@ -62,7 +63,11 @@ class Tub:
                 ent = self.definition.entity(key)
                 assert isinstance(ent, NumberEntity)
                 sp = values.get(ent.field)
-                ctl.on_status(float(sp) if isinstance(sp, (int, float)) and not isinstance(sp, bool) else None)
+                mode = values.get(ent.control.set_mode_field) if ent.control.set_mode_field else None
+                ctl.on_status(
+                    float(sp) if isinstance(sp, (int, float)) and not isinstance(sp, bool) else None,
+                    mode if isinstance(mode, bool) else None,
+                )
             if changed:
                 for listener in self._listeners:
                     listener(changed)

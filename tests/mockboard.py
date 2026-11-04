@@ -27,6 +27,8 @@ class MockBoard:
     presses: list[tuple[int, int]] = field(default_factory=list)
     acked: list[int] = field(default_factory=list)
     ignore_presses: int = 0  # simulate presses lost on the bus
+    new_client_poll_after: int = 0  # suppress the 0x00 poll for this many cycles (slow channel grant)
+    cycles: int = 0
 
     def status(self) -> Frame:
         d = bytearray(16)
@@ -45,7 +47,9 @@ class MockBoard:
             out.append(Frame(ch, 0xBF, 0x06))
             if ch == TOPSIDE:
                 out.append(Frame(TOPSIDE, 0xBF, 0xCC, cc_encode(0x00, key=0x33)))
-        out.append(Frame(0xFE, 0xBF, 0x00))
+        self.cycles += 1
+        if self.cycles > self.new_client_poll_after:
+            out.append(Frame(0xFE, 0xBF, 0x00))
         if self.set_mode_frames:
             self.set_mode_frames -= 1
         out.append(self.status())

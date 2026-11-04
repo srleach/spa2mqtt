@@ -92,6 +92,7 @@ class StepperControl:
     down: str
     confirm_frames: int = 3
     max_attempts: int = 40
+    set_mode_field: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

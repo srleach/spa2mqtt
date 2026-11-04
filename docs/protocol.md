@@ -279,11 +279,38 @@ Index = folded byte `d[j]` (Model B). The equivalent Model A bytes are `P[5+2j]`
 | C4 status is broadcast ≈ 3.3 times per second (≈ 300 ms). | **Confirmed** | D7: 1 804 C4 in 541 s; D2: 200 rows per full minute. |
 | CA lights ≈ 1 Hz; new-client 0x00 ≈ 1 Hz; CTS to 0x10 ≈ 45 Hz, each answered by a CC. | Confirmed | D7 [A:census]. |
 | A topside press is reflected in the next C4 frame (≤ 300 ms). | Confirmed | D7: CC and the C4 change share a capture chunk timestamp, e.g. t≈239.3 [A:labelled]. |
-| Set mode (after the first temp press) times out ≈ 5 s after the last press. | Confirmed | D7: d2 bit 5 set at t≈209.9, clear at 215.2; 238.2 → 244.5. |
+| Set mode (after the first temp press) times out ≈ 5 s after the last press. | Confirmed | D7: 5 of 6 periods end 5.2–5.5 s after the last press [A:setmode]. |
+| One period ended early, 3.6 s after the last press, in the same frame that pump 1 started for heating. | Hypothesis: heat-call start closes the set screen | D7 t≈454.5–458.1 [A:setmode]; one occurrence only. |
 | C4 repeats unchanged between state changes; consumers must de-duplicate. | Confirmed | D2 runs of up to 2 313 identical rows [A:timeline]. |
 | No status for > 10 s means the link is down (Prolink rule). | Inferred | PJ `docs/ProlinkMessageParsing.txt` L1439–1453. |
 | The setpoint loop should allow ≥ 2 status frames (≈ 0.6 s) between presses and give up after a bounded number of attempts. | Inferred (design) | HJ/IR retry constants; PJ waits 1 s between presses. |
 | Topside behaviour: the first Temp up/down press only enters set mode; each further press within ≈ 5 s changes the setpoint by 0.5 °C. | **Confirmed** | D7 t≈210 (enter only), 238–239 (enter + step), 454 (enter + 2 steps). The legacy `(target − current)/0.5` press count was always one short. |
+
+## 7a. Set mode: where it is visible, and how it was validated
+
+Set mode is the topside state entered by the first Temp up/down press, in which further
+presses step the setpoint. It is visible **only in the C4 status broadcast**. Every check below
+comes from D7 [A:setmode].
+
+| Check | Result | Status |
+|---|---|---|
+| Two independent indicators | d2 bit 5 and d13 (0x98 instead of 0x99) agree on **all 1 804** status frames: 119 in set mode, 1 685 not. They come from different byte pairs on the wire. | Confirmed |
+| Cause | All 6 periods start in the same capture chunk as a Temp up/down CC from the topside. No temp press falls outside a period. The setpoint never changes outside a period. | Confirmed |
+| First press only enters set mode | In every period, setpoint steps = presses − 1 (1→0, 2→1, 2→1, 3→2, 2→1, 4→3). | Confirmed |
+| Timeout | 5 of 6 periods end 5.2–5.5 s after the last press. The sixth ends after 3.6 s (§7). | Confirmed (≈ 5 s) |
+| Other message types | CA lights frames continue unchanged. The topside's CC frames carry only the presses, then code 0x00. The 0x00 new-client poll continues. No new address or message type appears. | Confirmed |
+| Bus cadence | 13.40 CTS polls per status frame both inside and outside set mode. (Per-second rates differ by ~5 %, an artefact of per-chunk capture timestamps.) | Confirmed |
+
+The broadcast placement suggests that the board drives every panel's display from C4, so a
+second topside would flash the same set screen. That is a hypothesis: no install with two panels
+has been captured.
+
+**Consequence for control.** `SetpointController` reads the set-mode field named by the
+definition (`control.set_mode_field`). A press that turns set mode on is the "wake" press, and
+the next press follows on the next status frame. Without the field, the controller falls back to
+waiting `confirm_frames` and retrying. Both paths also wait while the press is still queued for a
+bus slot. Without that wait, a slow channel grant made the fallback queue duplicate presses and
+overshoot (regression test `test_slow_channel_grant_does_not_duplicate_presses`).
 
 ## 8. Units
 

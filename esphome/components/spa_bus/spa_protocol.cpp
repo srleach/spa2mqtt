@@ -255,11 +255,12 @@ float SetpointController::set_target(float value) {
   target = std::round(clamped / step) * step;
   has_target = true;
   attempts = 0;
+  wake_presses = 0;
   pending_ = false;
   return target;
 }
 
-int SetpointController::on_status(bool valid, float setpoint) {
+int SetpointController::on_status(bool valid, float setpoint, int set_mode, bool press_queued) {
   if (!has_target || !valid) return -1;
   if (std::fabs(setpoint - target) < step / 2) {
     has_target = false;
@@ -267,7 +268,11 @@ int SetpointController::on_status(bool valid, float setpoint) {
     return -1;
   }
   if (pending_) {
+    if (press_queued) return -1;
     if (setpoint != at_press_) {
+      pending_ = false;
+    } else if (set_mode == 1 && mode_at_press_ == 0) {
+      wake_presses++;  // the press only opened the set screen; step now
       pending_ = false;
     } else {
       if (--wait_ > 0) return -1;
@@ -282,6 +287,7 @@ int SetpointController::on_status(bool valid, float setpoint) {
   pending_ = true;
   wait_ = confirm_frames;
   at_press_ = setpoint;
+  mode_at_press_ = set_mode;
   return setpoint < target ? up : down;
 }
 

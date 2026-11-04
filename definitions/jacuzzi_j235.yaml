@@ -154,7 +154,7 @@ entities:
     component: number
     field: setpoint
     name: Temperature Set Control
-    control: {type: stepper, up: temp_up, down: temp_down, confirm_frames: 3, max_attempts: 60}
+    control: {type: stepper, up: temp_up, down: temp_down, set_mode_field: set_mode, confirm_frames: 3, max_attempts: 60}
     min: 20
     max: 40
     step: 0.5

@@ -6,8 +6,8 @@ No MQTT, no Home Assistant, and no transmission. Three independent guards:
 2. There is no ``BusWriter``: nothing in this module can send.
 3. The transport is wrapped in :class:`ReadOnlyTransport`, whose ``write`` raises.
 
-    spa2mqtt monitor 192.168.25.73                   # EW11A on port 8899
-    spa2mqtt monitor 192.168.25.73 --interval 5 --record session.log
+    spa2mqtt monitor 192.168.1.100                   # EW11A on port 8899
+    spa2mqtt monitor 192.168.1.100 --interval 5 --record session.log
     spa2mqtt monitor --replay tests/fixtures/captures/raw/2026-11-04T220754Z_j235_labelled.log
 """
 

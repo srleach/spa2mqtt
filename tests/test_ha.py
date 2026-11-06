@@ -137,14 +137,14 @@ def test_publisher_heartbeat() -> None:
 def test_legacy_config_file_still_works(tmp_path: Path) -> None:
     p = tmp_path / "config.yml"
     p.write_text(
-        "spa:\n  connection:\n    spa_address: 192.168.25.73\n    spa_port: 8899\n  config: jacuzzi_j235_encrypted\n"
-        "mqtt:\n  broker: 192.168.26.7\n  port: 1883\n  username: u\n  password: p\n",
+        "spa:\n  connection:\n    spa_address: 192.168.1.100\n    spa_port: 8899\n  config: jacuzzi_j235_encrypted\n"
+        "mqtt:\n  broker: 192.168.1.7\n  port: 1883\n  username: u\n  password: p\n",
         encoding="utf-8",
     )
     cfg = load_config(p, env={})
     assert cfg.definition == "jacuzzi_j235_encrypted"
-    assert (cfg.transport.host, cfg.transport.port) == ("192.168.25.73", 8899)
-    assert (cfg.mqtt_host, cfg.mqtt_username, cfg.mqtt_password) == ("192.168.26.7", "u", "p")
+    assert (cfg.transport.host, cfg.transport.port) == ("192.168.1.100", 8899)
+    assert (cfg.mqtt_host, cfg.mqtt_username, cfg.mqtt_password) == ("192.168.1.7", "u", "p")
     assert cfg.transmit is False
     assert cfg.unique_id_prefix == "" and cfg.legacy_topics is True
 

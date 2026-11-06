@@ -212,7 +212,7 @@ value fails validation.
 ```yaml
 spa:
   definition: jacuzzi_j235          # legacy key `config:` accepted
-  transport: {type: tcp, host: 192.168.25.73, port: 8899}   # legacy spa.connection.* accepted
+  transport: {type: tcp, host: 192.168.1.100, port: 8899}   # legacy spa.connection.* accepted
   transmit: false                   # MUST be set true to send any command
 mqtt: {broker: …, port: 1883, username: …, password: …}
 ha:

@@ -1,0 +1,5 @@
+# Documentation build (MkDocs Material). Used by .github/workflows/docs.yml.
+#   pip install -r requirements-docs.txt && mkdocs serve
+# Exact pins so a docs build is reproducible; Dependabot proposes updates.
+mkdocs==1.6.1
+mkdocs-material==9.8.0

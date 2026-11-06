@@ -1,0 +1,108 @@
+# MkDocs configuration for the spa2mqtt documentation site.
+# Build locally:  pip install -r requirements-docs.txt && mkdocs serve
+# CI (.github/workflows/docs.yml) runs "mkdocs build --strict" and publishes to the gh-pages branch.
+
+site_name: spa2mqtt
+site_description: Bridge the RS485 bus of Balboa-family "encrypted" hot tubs to Home Assistant, over MQTT or ESPHome.
+site_url: https://srleach.github.io/spa2mqtt/
+repo_url: https://github.com/srleach/spa2mqtt
+repo_name: srleach/spa2mqtt
+edit_uri: edit/main/docs/
+copyright: spa2mqtt is MIT licensed. Wiring into a spa is at your own risk.
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+    - content.tabs.link
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  # Inlines files into pages: docs/assets/*.svg (so diagrams follow the light/dark theme
+  # through currentColor) and deploy/*.yml (so the docs show the exact deploy files).
+  - pymdownx.snippets:
+      base_path: [docs, deploy]
+      check_paths: true
+
+# Link checks. "warn" fails the build under --strict; "info" only reports.
+# Pages must link to other pages with relative .md paths, and to repository files outside
+# docs/ with absolute GitHub URLs. The four Reference pages contain no relative links that
+# leave docs/, so internal-link checking stays strict.
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: info
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: info
+    unrecognized_links: info
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Install:
+      - Docker Compose: install/docker-compose.md
+      - Portainer: install/portainer.md
+  - ESPHome:
+      - Overview: esphome/index.md
+      - Hardware and wiring: esphome/hardware.md
+      - Build and flash: esphome/install.md
+      - Switch over from MQTT: esphome/migrate.md
+  - Configuration: configuration.md
+  - Monitor and capture: monitor-and-capture.md
+  - Tub definitions: tub-definitions.md
+  - Releases and versions: releases.md
+  - Safety: safety.md
+  - Reference:
+      - Wire protocol: protocol.md
+      - Design: design.md
+      - Research notes: research-notes.md
+      - History: history.md

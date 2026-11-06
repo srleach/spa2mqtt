@@ -4,7 +4,7 @@
 SAFETY: this tool never writes to the socket. There is no send/sendall call in
 this file. Typed labels are written to the log file only, never to the tub.
 
-    python3 tools/capture.py 192.168.25.73 [8899]
+    python3 tools/capture.py 192.168.1.100 [8899]
 
 While it runs, type a short label and press Enter before each topside action
 (e.g. "p1 press 1"). The log format is one record per line:

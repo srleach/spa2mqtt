@@ -1,0 +1,19 @@
+# Weekly update proposals. CI runs on each pull request; nothing merges automatically.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      actions: {patterns: ["*"]}
+    commit-message: {prefix: ci}
+  - package-ecosystem: pip
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      python: {patterns: ["*"]}
+    commit-message: {prefix: build}
+  - package-ecosystem: docker
+    directory: /
+    schedule: {interval: weekly}
+    commit-message: {prefix: build}

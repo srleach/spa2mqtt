@@ -1,0 +1,17 @@
+/* Inline SVG diagrams take the page text colour, so they read well in light and dark mode. */
+.s2m-diagram {
+  color: var(--md-default-fg-color);
+  margin: 1.5em 0;
+}
+
+.s2m-diagram svg {
+  display: block;
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+}
+
+/* Keep wide reference tables readable on phones. */
+.md-typeset table:not([class]) td code {
+  white-space: nowrap;
+}

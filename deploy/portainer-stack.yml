@@ -1,0 +1,25 @@
+# spa2mqtt stack for Portainer: published image, settings from environment variables only.
+#
+# Paste this into Portainer > Stacks > Add stack > Web editor, then add the variables in
+# the "Environment variables" section below the editor. SPA_IP and MQTT_BROKER are required.
+# There are no volumes on purpose: Portainer on Home Assistant OS cannot bind-mount files
+# ("mkdir /data: read-only file system").
+#
+# Guide: https://srleach.github.io/spa2mqtt/install/portainer/
+
+services:
+  spa2mqtt:
+    image: ghcr.io/srleach/spa2mqtt:${SPA2MQTT_TAG:-2}
+    container_name: spa2mqtt
+    restart: unless-stopped
+    environment:
+      SPA_IP: ${SPA_IP:?Set SPA_IP to the RS485-to-TCP adapter address}
+      SPA_PORT: ${SPA_PORT:-8899}
+      SPA_DEFINITION: ${SPA_DEFINITION:-jacuzzi_j235}
+      # SAFETY: false = receive-only. Read the Safety page before you set true.
+      SPA_TRANSMIT: ${SPA_TRANSMIT:-false}
+      MQTT_BROKER: ${MQTT_BROKER:?Set MQTT_BROKER to the MQTT broker address}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}

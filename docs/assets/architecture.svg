@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 420" width="1000" height="420" role="img" aria-labelledby="s2m-arch-title s2m-arch-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="15" fill="currentColor">
+  <title id="s2m-arch-title">spa2mqtt architecture</title>
+  <desc id="s2m-arch-desc">The spa control board RS485 header connects either to an EW11A RS485-to-TCP adapter that feeds the spa2mqtt Docker container, which publishes to an MQTT broker read by Home Assistant, or to an ESP32 running the ESPHome spa_bus component, which talks to Home Assistant over the ESPHome native API.</desc>
+  <defs>
+    <marker id="s2m-arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="currentColor" stroke-width="1.5" fill="currentColor" fill-opacity="0.06">
+    <rect x="10" y="150" width="160" height="110" rx="10"/>
+    <rect x="220" y="55" width="160" height="80" rx="10"/>
+    <rect x="430" y="55" width="160" height="80" rx="10"/>
+    <rect x="640" y="55" width="140" height="80" rx="10"/>
+    <rect x="220" y="275" width="160" height="80" rx="10"/>
+    <rect x="830" y="150" width="160" height="110" rx="10"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="2" marker-end="url(#s2m-arch-arrow)">
+    <polyline points="170,190 195,190 195,95 218,95"/>
+    <polyline points="170,220 195,220 195,315 218,315"/>
+    <line x1="380" y1="95" x2="428" y2="95"/>
+    <line x1="590" y1="95" x2="638" y2="95"/>
+    <polyline points="780,95 805,95 805,190 828,190"/>
+    <polyline points="380,315 805,315 805,220 828,220"/>
+  </g>
+  <g text-anchor="middle" stroke="none">
+    <text x="90" y="185" font-weight="700">Spa control</text>
+    <text x="90" y="205" font-weight="700">board</text>
+    <text x="90" y="228" font-size="13">RS485 header for a</text>
+    <text x="90" y="246" font-size="13">second topside panel</text>
+    <text x="300" y="88" font-weight="700">EW11A</text>
+    <text x="300" y="110" font-size="13">RS485 to TCP, port 8899</text>
+    <text x="510" y="88" font-weight="700">spa2mqtt</text>
+    <text x="510" y="110" font-size="13">Python, Docker</text>
+    <text x="710" y="88" font-weight="700">MQTT broker</text>
+    <text x="710" y="110" font-size="13">e.g. Mosquitto</text>
+    <text x="300" y="308" font-weight="700">ESP32 + RS485</text>
+    <text x="300" y="330" font-size="13">ESPHome, spa_bus</text>
+    <text x="910" y="195" font-weight="700">Home</text>
+    <text x="910" y="215" font-weight="700">Assistant</text>
+    <text x="910" y="240" font-size="13">same entities</text>
+    <text x="300" y="30" font-size="13" font-style="italic">Option A: MQTT bridge</text>
+    <text x="300" y="395" font-size="13" font-style="italic">Option B: ESPHome (no extra box)</text>
+    <text x="405" y="86" font-size="12">TCP</text>
+    <text x="615" y="86" font-size="12">MQTT</text>
+    <text x="600" y="306" font-size="12">ESPHome native API</text>
+    <text x="150" y="140" font-size="12">RS485 A/B</text>
+  </g>
+</svg>

@@ -1,0 +1,27 @@
+# spa2mqtt with the published image. Use this on any Docker host.
+#
+#   cp .env.example .env     # then edit .env
+#   docker compose up -d
+#
+# Guide: https://srleach.github.io/spa2mqtt/install/docker-compose/
+name: spa2mqtt
+
+services:
+  spa2mqtt:
+    # "2" follows every 2.x.y release. Set SPA2MQTT_TAG in .env to pin a version, e.g. 2.0.0.
+    image: ghcr.io/srleach/spa2mqtt:${SPA2MQTT_TAG:-2}
+    container_name: spa2mqtt
+    restart: unless-stopped
+    # Every setting comes from .env. See .env.example.
+    env_file: .env
+    # Optional: settings that have no environment variable (the ha: section, transport
+    # type serial) need a config.yml. Values in .env still override it.
+    # volumes:
+    #   - ./config.yml:/app/config.yml:ro
+    # Optional: a USB RS485 adapter instead of TCP. Also set spa.transport.type: serial
+    # and spa.transport.device in config.yml.
+    # The image runs as an unprivileged user, so also add the group that owns the device.
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+    # group_add:
+    #   - dialout

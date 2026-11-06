@@ -3,7 +3,12 @@
 #
 # Native ESPHome bridge for the Jacuzzi J235 (spa_bus external component from spa2mqtt).
 # RS485 uses the board's onboard transceiver on GPIO17 (TX) / GPIO18 (RX), as in the
-# board's archived config. Wire A/B to the tub's RS485 header (see README); 115200 8N1.
+# board's archived config. Wire A/B to the tub's RS485 header; 115200 8N1.
+# Step-by-step guide, wiring diagram and safety notes:
+#   https://srleach.github.io/spa2mqtt/esphome/
+#
+# Secrets used below (put them in secrets.yaml next to this file):
+#   wifi_ssid, wifi_password, jacuzzibridge_api_key
 #
 # friendly_name "Jacuzzi J235" reproduces the entity IDs the MQTT bridge created
 # (sensor.jacuzzi_j235_current_water_temperature, ...) once the old MQTT device is removed
@@ -37,15 +42,19 @@ psram:
   speed: 80MHz
 
 external_components:
-  # The repository is private: either make it public, or use
-  #   source: {type: git, url: https://<token>@github.com/srleach/spa2mqtt, ref: main}
-  - source: github://srleach/spa2mqtt@main
+  # Pin a release tag (vX.Y.Z), so a rebuild compiles the same code you tested. Use the
+  # same tag for the component and the package below. Releases:
+  #   https://github.com/srleach/spa2mqtt/releases
+  # While the repository is private, use the git form with a read-only token instead:
+  #   source: {type: git, url: https://github.com/srleach/spa2mqtt, ref: v2.0.0,
+  #            username: <github user>, password: !secret github_token}
+  - source: github://srleach/spa2mqtt@v2.0.0
     components: [spa_bus]
-    refresh: 1d
 
 packages:
-  # Every J235 entity, generated from definitions/jacuzzi_j235.yaml.
-  spa_entities: github://srleach/spa2mqtt/esphome/packages/jacuzzi_j235.yaml@main
+  # Every J235 entity, generated from definitions/jacuzzi_j235.yaml. Keep the tag equal to the
+  # external_components tag: the package names entity keys that the component must know.
+  spa_entities: github://srleach/spa2mqtt/esphome/packages/jacuzzi_j235.yaml@v2.0.0
 
 uart:
   - id: spa_uart
@@ -57,12 +66,14 @@ uart:
 spa_bus:
   id: spa
   uart_id: spa_uart
-  definition: jacuzzi_j235
+  definition: jacuzzi_j235   # a definition name from definitions/, or a path to your own YAML
   # SAFETY: receive-only until you set this to true. Buttons and the setpoint number log a
   # warning and do nothing while false. With true, the first command triggers a bus channel
   # request (docs/protocol.md section 4).
   transmit: false
-  heartbeat: 60s
+  heartbeat: 60s            # republish every entity this often, even when nothing changed
+  # The onboard transceiver switches direction by itself, so no flow_control_pin is set.
+  # A MAX3485/SP3485 module with DE/RE wired to a GPIO needs: flow_control_pin: GPIOxx
   bus_state:
     name: Bus State
 

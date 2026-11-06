@@ -122,6 +122,20 @@ worked through a scripted list of topside actions, typing a label for each. Resu
 | **Native ESPHome component** reading the *same* YAML at compile time; a framework-free C++ core tested on the host against the same fixtures | No EW11, no cloud, no sidecar. One source of truth for both runtimes. |
 | Old implementation on branch `legacy/pre-rewrite` | Rollback until the switch-over. |
 
+### 4 November 2026: per-byte decryption and giving back
+
+| Finding | Evidence | Consequence |
+|---|---|---|
+| The fold loses data. With the per-frame key removed, both bytes of some pairs change. | D7: bytes 2 and 3, bytes 28 and 29 | Decode per byte, not per pair. |
+| One key stream decodes everything: pyjacuzzi's formula with four bytes corrected by −8. | Wall clock, topside labels, D1 and D7 | `decode: decrypt` in the definition; no per-field XORs. |
+| The same stream decodes the Sundance 780 and another encrypted Jacuzzi. | HyperActiveJ's sample frame (14 Apr 2022); a pyjacuzzi frame labelled by its author | The August–December date gap closes, the fold's year is shown to be wrong on other tubs, and a definition written for one board fits the family. |
+| Correction: the fold's weekday was right all along. The "off by one" on foreign frames came from the fold's wrong year. | Same frames | Docs corrected. |
+
+An issue for HyperActiveJ's repository (now pete-jorgensen/SundanceHotTub2MQTT) was drafted. It
+answers the open question in their `DECODING.md` §3.8 and includes a standalone decoder, tested on
+their own sample frame. That is the first thing this project has given back to the work it is
+built on.
+
 ## Threads worth telling in the write-up
 
 * **Pluggability as a slow-burning requirement.** README concepts (May 2025) → class-name
@@ -132,5 +146,7 @@ worked through a scripted list of topside actions, typing a label for each. Resu
   epochs and the owner typing "p1 press 2" into a terminal.
 * **The value of a labelled capture.** Eighteen months of guessing about pump bits were settled
   by nine minutes of receive-only capture with a script of topside actions.
+* **Giving back.** The labelled capture answered a question that HyperActiveJ had asked in
+  writing, and the fix decodes their own sample frame. Posting it upstream closes the loop.
 * **Safety as design.** Receive-only by default, one choke point, and a static test.
   Development never transmitted to the real tub.

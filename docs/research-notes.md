@@ -32,13 +32,14 @@ The protocol facts themselves live in `protocol.md`.
 | 4 | **Byte d14.** PR 17: hour. SC README: bit 0 = °C flag. HJ: secondary temperature. | Hour and °C flag refuted. Secondary temperature kept as a hypothesis. | D2: values 22–27 at 20–21 h; bit 0 toggles without a unit change |
 | 5 | **Circulation bit.** SC: d1 bit 6. HJ upstream: d4 bit 6. | d1 bit 6 for J235 (d4 is constant 0x05 on J235 even while circulating). | D2 |
 | 6 | **Month.** HJ upstream: `f7&7` "cannot be right" (read 1 in August). | Resolved: `d7 = (day << 3) XOR month` (4-bit month). It fits May (D1–D6), HJ's "January 19" and D7's 4 November (0x2B). For months 8–12, day bit 0 and month bit 3 collide in the fold, so the fold alone cannot decode dates then. | HJ `DECODING.md` §3.3; D2–D7 |
-| 7 | **Day of week.** PJ: Model A `P[20] & 7` ("not sure"). | Folded `d2 & 7` (Sunday = 0) on J235, matching four dated captures. Third-party frames are off by one, so J235-only. | `analyze_captures.py clock` |
+| 7 | **Day of week.** PJ: Model A `P[20] & 7` ("not sure"). | Plaintext byte 5 bits 2–0 (Sunday = 0), equal to folded `d2 & 7`. Right on five dated J235 captures and on all three foreign frames. (An earlier version said the foreign frames were off by one; that was the fold's wrong year, not the weekday.) | `analyze_captures.py clock`, `decrypt` |
 | 8 | **Is 0x16 encrypted?** Legacy S2M and SC route 0x16/0x23 to the XOR decoder. | No. 0x16/0x17/0x23 are the plaintext Jacuzzi protocol; the J235 does not use them. The rewrite does not decode them as encrypted. | PJ L1617–1665; HJ upstream removal |
 | 9 | **ClearRay code.** PJ docs 0x0E; HJ/JB 0x0F. | 0x0F (two independent sources; PJ text is internally inconsistent). Not exposed until confirmed on J235. | protocol.md §3.3 |
 | 10 | **Status cadence.** "About every minute" (issue paraphrase) vs "very high rate" (PJ). | ≈ 3.3 Hz on J235. | D7: 1 804 C4 in 541 s; D2: 200 rows per full minute |
 | 12 | **Pump bits.** Legacy definition: main pump = d2 bit 4, secondary = d1 bit 2, circulation = d1 bit 6. PJ: pump 1 is 2 bits. | All three legacy bits are right, but their meaning is narrower: d1.6 = pump 1 running (any speed); d2 bits 4–3 = pump 1 speed (bit 4 = high); d1.2 = pump 2. | D7 t≈90–196 |
 | 13 | **Light codes.** HJ: 0xF1 light on, 0xF2 colour. | The J235 topside has one light button that sends 0x12 (HJ 0xF2) and steps through the modes. 0x11 is never sent. | D7 t≈294–414 |
 | 14 | **First temp press.** Legacy: N presses for N half-degrees. | The first press only enters set mode (d2 bit 5, d13 0x98). The legacy controller was always one press short. | D7 t≈210, 238 |
+| 16 | **Fold vs per byte.** spa2mqtt 2.0 and HJ decode with the fold; HJ `DECODING.md` §3.8 asks whether the first byte of each pair is a key, a nonce or a second data channel. | Answered with raw captures: `payload[0]` is a per-frame nonce, and after removing it both bytes of a pair can carry data. Decoding now removes the nonce and a key stream (pyjacuzzi's formula with four corrections) and reads plaintext per byte. It fixes the August–December date and the year on foreign frames, and it is shared with the Sundance 780. | protocol.md §3.3; `analyze_captures.py decrypt` |
 | 15 | **Dormant channel reuse.** HJ/IR rely on it. | Not possible on this install: the only polled channel (0x10, the topside) answers every CTS. A client must use the 0x00/0x01 request. | D7 census |
 | 11 | **`decoding.md` decoded values.** The doc's "post-decoding" lines all show minute 0x26. | The first 18 frames actually decode to minute 0x23; the doc copy-pasted the decode. Fixture keeps the raw frames, not the doc's decode. | `analyze_captures.py cipher` |
 
@@ -56,8 +57,7 @@ The protocol facts themselves live in `protocol.md`.
 Resolved by D7: pump bits and speeds, button codes, the lights layout, the panel channel,
 cadence, and the month encoding (explained, but not decodable for months 8–12 from the fold).
 
-1. Day/month for August–December: needs the true per-byte key stream (Model A corrected) or
-   another date source. Not needed by any entity.
+1. ~~Day/month for August–December~~: resolved by per-byte decryption (protocol.md §3.3).
 2. Manual circulation (d1 bit 7) and the meaning of d1 bit 5 (heat demand?) and d10 bit 7.
 3. d3 / d12 and the d13 code space: maintenance counters and display codes. Needs the reminder
    values read from the topside menu during a capture.
@@ -65,8 +65,9 @@ cadence, and the month encoding (explained, but not decodable for months 8–12 
 5. Channel assignment on J235 (0x00/0x01/0x02/0x03). Can only be tested by transmitting,
    which is out of scope for development. The code path exists but is disabled by default.
 6. EW11A serial settings (expected 115200 8N1).
-7. Whether Model A or Model B reflects the real plaintext layout (d7 and d14 suggest the
-   fields are per-byte and the fold merges neighbours).
+7. ~~Whether Model A or Model B reflects the real plaintext layout~~: per byte, with a corrected
+   key stream (protocol.md §3.3). Still open: the key stream at bytes not yet tied to a known field.
+8. The meaning of plaintext bytes 27 (display or alert code) and 28 (secondary value).
 
 ## Raw-capture request (sent to the owner)
 

@@ -360,7 +360,7 @@ jobs `python`, `cpp`, `esphome`.
 
 | # | Decision | Why |
 |---|---|---|
-| 1 | Canonical decode is the pairwise fold (Model B), not the key-stream (Model A). | Key-independent; correct calendar day on J235; equals the legacy definition offsets, so identities and history are unaffected (protocol.md §3.2). |
+| 1 | ~~Canonical decode is the pairwise fold (Model B)~~, superseded by §11 row 11 (per-byte decryption). | Key-independent; correct calendar day on J235; equals the legacy definition offsets, so identities and history are unaffected (protocol.md §3.2). |
 | 2 | Drop `ha-mqtt-discoverable`; use paho directly. | Needed exact topic control for identity preservation; fewer dependencies (pydantic). |
 | 3 | `transmit` defaults to false in both implementations. | User constraint and bus safety; the legacy code transmitted at start-up. |
 | 4 | Lazy channel claim. | Never touch the bus unless a command needs it. |
@@ -383,5 +383,6 @@ jobs `python`, `cpp`, `esphome`.
 | 6 | `SpaCore` (definition tables + decoder + bus + setpoint loop) lives in the framework-free header, and `SpaBus` is a thin ESPHome wrapper. | Lets the host test drive the exact production state machine, not a copy. |
 | 7 | Docker image build is verified in CI only. | No Docker daemon in the development sandbox. |
 | 9 | Set-mode awareness: `control.set_mode_field` names the bit that shows the topside's set screen. The controller treats a press that opens set mode as the wake press and steps on the next frame. It also no longer counts down while its press is still queued for a bus slot. | protocol.md §7a. The queued-press guard fixes a real overshoot found by the new tests (a slow channel grant caused duplicate presses). Ported to the C++ core. |
+| 11 | Status decoding moved from the pairwise fold to per-byte decryption (`status.decode: decrypt` with a `keystream`). Fields read plaintext with no per-field XOR. Legacy fold-only logs are rebuilt through `status.fold_template`. | Raw captures showed the fold loses data when both bytes of a pair change (protocol.md §3.3). The fix also makes the field map portable to Sundance boards. It supersedes decision 1. |
 | 10 | `spa2mqtt monitor`: a standalone, read-only live decoder for the terminal (text or JSON lines, optional raw recording). | The owner's first contact with the real tub runs without MQTT and without any transmit path. |
 | 8 | Unencrypted Jacuzzi captures from unmerged PR 12 were recovered into `tests/fixtures/captures/unencrypted/` but are not decoded. | They evidence the `plain` codec non-goal; no J235 relevance. |

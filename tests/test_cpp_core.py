@@ -92,3 +92,8 @@ def test_cpp_decode_matches_python(replay_binary: Path, capture: Path, j235: Tub
         tub.on_frame(f)
     assert cpp == py
     assert "crc_errors=0" in proc.stderr
+
+
+def test_esphome_keystream_matches_python(j235: TubDefinition) -> None:
+    raw = esphome_definition_module().load("jacuzzi_j235")
+    assert bytes(esphome_definition_module().keystream(raw)) == j235.status_stream

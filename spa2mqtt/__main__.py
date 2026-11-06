@@ -99,7 +99,7 @@ def _monitor(args: argparse.Namespace) -> int:
     transport: Transport
     clock: Callable[[], float] = time.time
     if args.replay:
-        replay = ReplayTransport(args.replay, speed=args.speed, status_type=definition.status_type)
+        replay = ReplayTransport(args.replay, speed=args.speed, definition=definition)
         transport = replay
         clock = lambda: replay.current_time  # noqa: E731 - report on the capture's own timeline
     elif args.serial:

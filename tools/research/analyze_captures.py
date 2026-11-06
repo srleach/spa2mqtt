@@ -16,6 +16,7 @@ Sections:
     census    frame counts by (addr, mid, type) for each raw capture
     labelled  raw captures with MARK lines: C4/CA changes and panel button codes, interleaved
     setmode   set-mode periods: indicator agreement, presses vs setpoint steps, timeout, other traffic
+    decrypt   key removal: which bytes vary, the calibrated key stream, and dates on foreign frames
 """
 
 from __future__ import annotations
@@ -349,6 +350,68 @@ def section_setmode() -> None:
             )
 
 
+# Raw C4 frames published by other projects (protocol.md §3.3).
+FOREIGN = [
+    (
+        "Sundance 780, HyperActiveJ sundanceRS485.py docstring (fc38ab5)",
+        "7E26FFAFC4AEA7AAABA4A1C95DA5A1C2A19CBDCEBBE2B9BBADB4B5A7B7DFB1B29BD38D8E8F88F97E",
+        None,
+    ),
+    (
+        "Encrypted Jacuzzi, pyjacuzzi jacuzzi.py L246",
+        "7e26ffafc41f151b1a1516a6ec161073102d0c470b68080a1d05012206b0000368673c3f3e39937e",
+        None,
+    ),
+    (
+        "Encrypted Jacuzzi, pyjacuzzi jacuzzi.py L1124",
+        "7e26ffafc4a2aba6a7a8ad0251abadc8ad90b122b6d3b5b7a0b8bc92bb14bdbedee681828384f07e",
+        "author's label: 05/18/23 2:40PM, WS 103, WT 102",
+    ),
+]
+STREAM_ADJUST = {5: -8, 14: -8, 15: -8, 22: -8}
+
+
+def keystream(length: int = 33) -> bytes:
+    return bytes([0] + [0x19 ^ ((31 - i + STREAM_ADJUST.get(i, 0)) % 64) for i in range(1, length)])
+
+
+def plaintext(frame: bytes) -> bytes:
+    p = frame[5:-2]
+    s = keystream(len(p))
+    return bytes(b ^ p[0] ^ k for b, k in zip(p, s))
+
+
+def section_decrypt() -> None:
+    days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    print("== decrypt: per-frame key, varying bytes, key stream, foreign frames")
+    for log in sorted((CAPTURES / "raw").glob("*.log")):
+        frames = [d for _, k, d in _frames_with_time(log) if k == "FRAME" and d[4] == 0xC4]
+        keys = Counter(f[5] for f in frames)
+        seen: dict[int, set[int]] = {}
+        for f in frames:
+            p = f[5:-2]
+            for i in range(1, len(p)):
+                seen.setdefault(i, set()).add(p[i] ^ p[0])
+        varying = {i: len(v) for i, v in seen.items() if len(v) > 1}
+        print(
+            f"  {log.name}: {len(frames)} C4 frames, {len(keys)} distinct keys; bytes that vary after key removal "
+            f"(index: distinct values): {varying}"
+        )
+    print("  key stream S[i] = 0x19 ^ ((31 - i + adjust) mod 64), adjust -8 at bytes", sorted(STREAM_ADJUST))
+    print("   ", keystream().hex(" "))
+    rows = [
+        (f"J235 {log.stem[:10]}", next(d for _, k, d in _frames_with_time(log) if k == "FRAME" and d[4] == 0xC4), None)
+        for log in sorted((CAPTURES / "raw").glob("*.log"))
+    ]
+    rows += [(label, bytes.fromhex(hx), note) for label, hx, note in FOREIGN]
+    for label, frame, note in rows:
+        p = plaintext(frame)
+        print(
+            f"  {label}: {p[1]:02d}:{p[22]:02d} {days[p[5] & 7]} {p[14] >> 3:02d}/{p[15] & 0x0F:02d}/{2000 + p[19]} "
+            f"water raw {p[10]} setpoint raw {p[16]}" + (f"   [{note}]" if note else "")
+        )
+
+
 SECTIONS = {
     "crc": section_crc,
     "cipher": section_cipher,
@@ -358,6 +421,7 @@ SECTIONS = {
     "census": section_census,
     "labelled": section_labelled,
     "setmode": section_setmode,
+    "decrypt": section_decrypt,
 }
 
 if __name__ == "__main__":

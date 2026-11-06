@@ -86,8 +86,8 @@ D7 with D2–D6 as corroboration. `[A:labelled]` prints the D7 timeline used for
 | TYPE | ADDR | MID | Direction | Meaning | Status | Evidence |
 |---|---|---|---|---|---|---|
 | 0xC4 | 0xFF | 0xAF | board → all | Status (encrypted) | Confirmed | D1 (all frames `FF AF C4`) |
-| 0xCA | 0xFF | 0xAF | board → all | Lights status (encrypted), ≈ 1 Hz | Confirmed | D7: 542 frames; layout §3.4. |
-| 0xCC | client | 0xBF | client → board | Button press (encrypted). The panel sends one in reply to **every** CTS; code 0x00 when idle. | Confirmed | D7: 24 177 CTS, 24 177 CC on 0x10 [A:census]; codes §3.3. |
+| 0xCA | 0xFF | 0xAF | board → all | Lights status (encrypted), ≈ 1 Hz | Confirmed | D7: 542 frames; layout §3.5. |
+| 0xCC | client | 0xBF | client → board | Button press (encrypted). The panel sends one in reply to **every** CTS; code 0x00 when idle. | Confirmed | D7: 24 177 CTS, 24 177 CC on 0x10 [A:census]; codes §3.4. |
 | 0x00 | 0xFE | 0xBF | board → all | "Any new clients?" (new-client CTS), ≈ 1 Hz | Confirmed (exists, cadence); purpose Inferred | D7: 542 frames in 541 s; SC L16, L687–701; IR. |
 | 0x01 | 0xFE | 0xBF | client → board | Channel assignment request, body `02 F1 73` | Hypothesis | SC L688–701 (`F1 73` "random magic"). |
 | 0x02 | 0xFE? | 0xBF | board → client | Channel assignment response; channel in `payload[0]` | Hypothesis | SC L703–705. |
@@ -105,9 +105,13 @@ fixed `ADDR=0x0A` (PJ L198–202). Sundance/J-series panels have been seen on 0x
 
 ### 3.2 Encryption of C4 (status)
 
+> **Superseded for decoding by §3.3.** This section explains the two published models and how
+> they relate. spa2mqtt 2.0 decoded with the pairwise fold. The current decode removes the key
+> and a calibrated key stream and reads plaintext per byte (§3.3).
+
 Two published models exist. **They are algebraically the same cipher.** This repo proves it
-on D1 and uses the pairwise fold as the canonical decode because it is key-independent and
-because it gives the right calendar day where the per-byte model does not.
+on D1. The first version of this document chose the pairwise fold because it is key-independent
+and because it gave the right calendar day where pyjacuzzi's per-byte layout did not.
 
 **Per-frame key byte.** `payload[0]` (frame byte 5) is a random per-frame key K. Every other
 payload byte is `K ⊕ c_i` for a fixed per-state stream c. In D1, 49 distinct keys appear across
@@ -150,7 +154,83 @@ review): `d[0] = P[6] ^ 0x06` and `d[j] = P[5+2j] ^ P[6+2j]` for j ≥ 1. Conseq
 of the even bytes, but the board decodes with whatever it really uses, so outbound C4 encoding
 is never needed and is not implemented.
 
-### 3.3 Encryption of CC (button command)
+### 3.3 Decryption: plaintext per byte (current decode)
+
+**Method.** Remove the per-frame key, then remove a fixed key stream:
+
+```
+plain[i] = payload[i] ^ payload[0] ^ S[i]          (i = 1 .. 32; plain[0] = 0)
+S[i]     = 0x19 ^ ((31 - i + adjust[i]) mod 64)     adjust[i] = -8 at i = 5, 14, 15, 22; else 0
+```
+
+Every field is then a plain read of one byte (or some of its bits), with no per-field constant.
+`S` is pyjacuzzi's key stream (`decrypt()`, key1 = `payload[0] ^ 0x19`, key2 counting down from
+31) with four corrections. [A:decrypt] prints the table.
+
+**Why per byte.** After the key is removed, varying data shows up in *both* bytes of some pairs
+(D7: bytes 2 and 3, bytes 28 and 29). The fold merges each pair into one value, so it loses
+information whenever both bytes change. This is what made the date undecodable from August to
+December (§5 d7) and what made the "secondary temperature" and the display code look multiplexed.
+
+**How the stream was established.**
+
+| Byte | Field | Evidence for S[i] on the bits used | pyjacuzzi formula |
+|---|---|---|---|
+| 1 | hour | Wall clock D3–D6; pyjacuzzi labelled frame (2:40 PM) | correct |
+| 2 | pump 1 running (bit 6), heat demand (bit 5), manual circ (bit 7) | D7 presses | correct on bits 5–7 |
+| 3 | pump 2 (bit 2) | D7 presses | correct on bit 2 |
+| 5 | day of week (bits 2–0), pump 1 speed (4–3), set mode (5) | Five dated J235 captures; D7 presses | **8 lower** |
+| 10 | water temperature | D7 display 38.5 °C; pyjacuzzi label 102 °F | correct |
+| 14 | day of month (bits 7–3) | D1 16 May, D7 4 Nov; pyjacuzzi label 18 May | **8 lower** |
+| 15 | month (bits 3–0) | D1 May, D7 November; pyjacuzzi label May | **8 lower** |
+| 16 | setpoint | D7 38.5 → 40.0 → 38.5; pyjacuzzi label 103 °F | correct |
+| 19 | year − 2000 | 2025, 2026 (J235); pyjacuzzi label 2023 | correct |
+| 21 | heater (bit 6) | D7 heating sequence | correct on bit 6 |
+| 22 | minute | Wall clock D3–D6; pyjacuzzi label 2:40 PM | **8 lower** |
+
+Status: **Confirmed** on the bits listed, for the J235. Bytes not listed use the formula without
+correction and are unverified. pyjacuzzi's own "minute `(b & 0x3F) ^ 0x08` for some unknown
+reason" is the byte-22 correction.
+
+**Cross-check on other tubs.** The same stream, calibrated only on the J235, decodes every raw
+C4 frame published by other projects [A:decrypt], `tests/test_replay.py`:
+
+| Frame | Plaintext | Check |
+|---|---|---|
+| HyperActiveJ Sundance 780 docstring sample (`fc38ab5`) | 14:17 Thu 14/04/2022, water 96 °F, set 90 °F | Thursday is right for that date; HyperActiveJ's first commits are 15–16 Apr 2022 |
+| pyjacuzzi `jacuzzi.py` L1124, labelled "05/18/23 2:40PM, WS 103, WT 102" | 14:40 Thu 18/05/2023, water 102, set 103 | Every labelled value matches |
+| pyjacuzzi `jacuzzi.py` L246 | 13:37 Tue 09/05/2023, water 96, set 97 | Valid date and weekday |
+
+The fold reads the year of the first two as 2023 and 2022, both wrong. Status: the cipher and
+stream are **Confirmed** to be shared by the J235, another encrypted Jacuzzi and the Sundance 780.
+
+**Agreement with the fold.** On all 1 858 raw J235 frames, the plaintext fields equal the old fold
+result wherever the fold was right (`test_per_byte_agrees_with_fold_on_every_raw_frame`). The
+differences are the corrections: the November day of month, and two pump-start frames in which
+the fold mixed the pump flag into the secondary value.
+
+**Plaintext field map (J235).** The fold field `d[j]` of §5 is `plain[2j] ^ plain[2j+1]` (with
+constants), so §5 remains the record of the evidence. The plaintext positions are:
+
+| Byte | Field | Status |
+|---|---|---|
+| 1 | hour (24 h) | Confirmed |
+| 2 | bit 7 manual circulation (hypothesis); bit 6 pump 1 running; bit 5 heat demand (hypothesis) | Confirmed (bit 6) |
+| 3 | bit 2 pump 2 | Confirmed |
+| 5 | bits 2–0 day of week (0 = Sunday); bits 4–3 pump 1 speed; bit 5 set mode | Confirmed |
+| 10 | water temperature, raw (°C × 2 on this tub) | Confirmed |
+| 14 | bits 7–3 day of month | Confirmed |
+| 15 | bits 3–0 month | Confirmed |
+| 16 | setpoint, raw | Confirmed |
+| 19 | year − 2000 | Confirmed |
+| 21 | bit 6 heater | Confirmed |
+| 22 | minute | Confirmed |
+| 26 | 0 normal screen, 1 temperature-set screen | Confirmed |
+| 27 | display or alert code: 0x4D (May 2025), 0x99 (Nov 2026) | Hypothesis |
+| 28 | secondary value (meaning unknown) | Hypothesis |
+| 29 | bit 5 follows pump 1 (the flag that HyperActiveJ saw as "+32 while circulating") | Inferred |
+
+### 3.4 Encryption of CC (button command)
 
 `payload = [K, K ^ 0xE0 ^ code]`, i.e. **button code = payload[0] ^ payload[1] ^ 0xE0**.
 (**Confirmed**: in D7 the panel's 24 177 CC frames use a random K every time, and every labelled
@@ -173,7 +253,7 @@ Plain codes are shared with the unencrypted Jacuzzi 0x17/0x1A commands:
 | 0x02 | 226 | Temp down (same set-mode behaviour) | **Confirmed** (D7 t≈272–273, 482–484) |
 | 0x04 | 228 | Pump 1: off → low → high → off | **Confirmed** (D7 t≈90, 119, 143) |
 | 0x05 | 229 | Pump 2: off ↔ on | **Confirmed** (D7 t≈181, 196) |
-| 0x12 | 242 | Light: each press steps off → blend → colours → off (§3.4) | **Confirmed** (D7 t≈294–414) |
+| 0x12 | 242 | Light: each press steps off → blend → colours → off (§3.5) | **Confirmed** (D7 t≈294–414) |
 | 0x0F | 239 | ClearRay (UV) / circulation | Hypothesis (HJ, JB). PJ docs say 0x0E (internally inconsistent). Not on the J235 topside. |
 | 0x11 | 241 | Light on/off | Hypothesis. The J235 panel never sent it; its single light button is 0x12. |
 | 0x1E | 254 | Menu | Hypothesis (defined in HJ, never sent; HJ warns against brute-forcing codes) |
@@ -182,7 +262,7 @@ The J235 has no direct "set temperature" command on the encrypted bus. Setpoint 
 by pressing Temp up/down and watching the reported setpoint (§7). (Inferred: SC
 L209, L259, L405–415; PJ L399–458 "no command to set an arbitrary value".)
 
-### 3.4 Lights (CA)
+### 3.5 Lights (CA)
 
 The CA payload (29 bytes) folds to 14 bytes `c0..c13`. HJ's assignment is confirmed by D7,
 with the owner's colour labels as the independent check [A:labelled]:
@@ -244,14 +324,14 @@ Index = folded byte `d[j]` (Model B). The equivalent Model A bytes are `P[5+2j]`
 | 1 | bit 6: **pump 1 running (any speed)** | `(d1>>6)&1` | **Confirmed** | D7: set ≈ 0.5 s after the pump-1 press that starts low speed (t≈90.8), stays set through high, clears on off (t≈143.8). Also set when heating starts pump 1 low (t≈454.5). On the J235, pump 1 low is the circulation/heating mode (PJ `jacuzzi.py` L925–936: "J-235 has no circ pump"). This is what the legacy "Circulation Pump Status" entity has always shown. |
 | 1 | bit 5: heat demand / flow proven? | `(d1>>5)&1` | Inferred (sequence), meaning Hypothesis | D7: in the heating sequence, pump 1 low starts at t≈454.5, d1 bit 5 at t≈496.1, heater bit at t≈512.8. D2 rows 1–277 (heating) also show it. Never set when pumps are run manually. |
 | 1 | bit 2: **pump 2 on** | `(d1>>2)&1` | **Confirmed** | D7: set by the pump-2 press at t≈181.2, cleared by the next at t≈195.6. Single speed. SC L339/L355. |
-| 2 | bits 2–0: **day of week** (0 = Sunday) | `d2 & 7` | **Confirmed** | [A:clock]: 18 May 2025 (Sun) 0, 19 May (Mon) 1, 20 May (Tue) 2, 16 May (Fri) 5; D7 4 Nov 2026 (Wed) 3. |
+| 2 | bits 2–0: **day of week** (0 = Sunday) | `d2 & 7` | **Confirmed** | [A:clock]: 18 May 2025 (Sun) 0, 19 May (Mon) 1, 20 May (Tue) 2, 16 May (Fri) 5; D7 4 Nov 2026 (Wed) 3. Also right on the three foreign frames (§3.3). An earlier version of this document said the foreign frames disagreed by one day; that came from pairing them with the fold's wrong year. |
 | 2 | bits 4–3: **pump 1 speed** (0 off, 1 low, 2 high) | `(d2>>3) & 3` | **Confirmed** | D7: press 1 → 0x03→0x0B (low), press 2 → 0x13 (high), press 3 → 0x03 (off) at t≈90/119/143. Heating starts low (t≈454.5); D2's heating window has bit 3 set. The legacy "main pump" bit (`d2` bit 4) is therefore "pump 1 on high". |
 | 2 | bit 5: **set mode active** (topside temperature edit) | `(d2>>5)&1` | **Confirmed** | D7: set by the first temp press and cleared ≈ 5 s after the last (t≈209.9–215.2, 238.2–244.5, 454.5–458.1). D4: set while menu values were edited. |
 | 3 | Menu-editable maintenance value | raw | Unknown | D4: changed 130 → 120 → 118 → 90 as the user edited values in the menu. D2 118, D3 111, D5/D6 101, D7 0x4B (75). SC names d3 "water life remaining days". |
 | 4 | constant 0x05 | – | Unknown | 0x05 in every J235 row, D7 included. HJ's "f4 bit 6 = circulation" never occurs on the J235. |
 | 5 | **Water temperature** | `(d5 ^ 0x02) × 0.5` °C | **Confirmed** | D7: 0x4F → 38.5 °C matches the owner's "display 38.5C" mark (t≈50); flickers 38.0/38.5. D2: a heating curve 37.5 → 38.5 around a 38.0 setpoint. Without the XOR the D2 reading would jump 2.5 °C in 10 min, so the XOR stays and PR 17/19 are refuted. Caveat: `^2` is really `^P[16]` (§3.2), constant in all samples. |
 | 6 | constant 0x20 | – | Hypothesis: heat mode | HJ `DECODING.md`: 32 = AUTO (34 ECO, 36 DAY). 0x20 in every J235 row, D7 included. |
-| 7 | **Day of month / month**, packed as `(day << 3) XOR month` | day = `d7 >> 3` **only when month ≤ 7**; month low 3 bits = `d7 & 7` | **Confirmed** for months 1–7; months 8–12 are ambiguous | D2–D6 (May) and D1 (16 May) decode exactly. D7 (4 Nov, Wed) has d7 = 0x2B = (4<<3) ^ 11: bit 3 carries both day bit 0 and month bit 3, so the fold cannot separate them (`d7>>3` gives 5). HJ's January 19 reading fits too. Model A (key-stream) might separate them but its per-byte key stream is wrong at these offsets (§3.2). |
+| 7 | **Day of month / month**, packed as `(day << 3) XOR month` | day = `d7 >> 3` **only when month ≤ 7**; month low 3 bits = `d7 & 7`. **Resolved by §3.3:** plaintext byte 14 is the day and byte 15 the month | **Confirmed**; fold ambiguous for months 8–12 | D2–D6 (May) and D1 (16 May) decode exactly. D7 (4 Nov, Wed) has d7 = 0x2B = (4<<3) ^ 11: bit 3 carries both day bit 0 and month bit 3, so the fold cannot separate them (`d7>>3` gives 5). HJ's January 19 reading fits too. Model A (key-stream) might separate them but its per-byte key stream is wrong at these offsets (§3.2). |
 | 8 | **Setpoint** | `d8 × 0.5` °C | **Confirmed** | D7: 0x4D → 38.5 at the "setpoint 38.5c" mark (t≈76); each Temp-up step adds 1 (0.5 °C) up to 0x50 (40.0, t≈469.6); steps back down to 0x4D. |
 | 9 | Year − 2000 | raw | **Confirmed** | 25 in every 2025 J235 row; 26 (0x1A) in D7 (2026); PJ sample 22, HJ sample 23. |
 | 10 | bit 6: **heater on** | `(d10>>6)&1` | **Confirmed** | D7: after raising the setpoint above the water temperature, heater on at t≈512.8 following pump 1 low and d1 bit 5 (§5 d1). D2 rows 1–51: set only while water < setpoint. SC L327; PJ `P[26]` bit 6. |
@@ -267,7 +347,7 @@ Index = folded byte `d[j]` (Model B). The equivalent Model A bytes are `P[5+2j]`
 
 | Claim | Status | Evidence |
 |---|---|---|
-| Frame: `7E 07 <chan> BF CC <K> <K^0xE0^code> <crc> 7E`. | Inferred | §3.3. |
+| Frame: `7E 07 <chan> BF CC <K> <K^0xE0^code> <crc> 7E`. | Inferred | §3.4. |
 | One frame = one press. Pump buttons cycle off → low → high → off (2-speed pump 1) or off → on → off. | Inferred | PJ L663–700 (plain boards); legacy S2M exposes raw "pump button" presses for this reason. |
 | Send only in the CTS slot for the client's own channel. | Inferred | §4. |
 | There is no acknowledgement. Success is observed only through the next status frames. HJ retries after 2 status frames without change; IR retries after 5, up to 8 attempts. | Inferred | SC L50, L405–430 `CHECKS_BEFORE_RETRY = 2`; IR `sundance_spa.h`. |
@@ -324,8 +404,8 @@ unit flag: PJ upstream `39c2834` explicitly leaves it undetermined for C4. Unit 
 | Area | Known (Confirmed) | Inferred | Unknown / Hypothesis |
 |---|---|---|---|
 | Framing | 0x7E flags, LEN semantics, CRC-8 (0x07/0x02/0x02), no escaping, own flags per frame | Valid LEN range 5–64 | – |
-| Cipher | Per-frame key byte; fold ⇔ key-stream identity; fold gives correct clock/date; CC `[K, K^0xE0^code]` | – | True per-byte field boundaries (Model A vs B); P16/P28 "constants" |
-| Status C4 | Hour, minute, day of week, year, water temp, setpoint, heater, pump 1 running + speed, pump 2, set mode, display state, cadence | d1 bit 5 sequence; d14 pump flag | Day/month for Aug–Dec; manual circ (d1.7); d10.7; d3, d4, d6, d12, d14 value; P37 |
+| Cipher | Per-frame key byte; fold ⇔ key-stream identity; key stream with four corrections (§3.3), shared with the Sundance 780 and another encrypted Jacuzzi; CC `[K, K^0xE0^code]` | – | Key stream at bytes not yet tied to a known field |
+| Status C4 | Hour, minute, day of week, day, month, year, water temp, setpoint, heater, pump 1 running + speed, pump 2, set mode, set screen, cadence | heat-demand sequence; pump-1 flag in byte 29 | Manual circ; d10.7; d3, d4, d6, d12; display code byte 27; secondary value byte 28 |
 | Lights CA | brightness, mode codes, R/G/B positions, ≈ 1 Hz | c9 blend phase | c0, c3, c5, c7, c10–13 |
 | Commands | 0x00 idle, 0x01/0x02 temp, 0x04 pump 1, 0x05 pump 2, 0x12 light; press semantics; set-mode first press | – | ClearRay 0x0F, 0x11, menu 0x1E on J235 |
 | Bus | Channel 0x10 = topside; CTS ≈ 45 Hz, CC on every CTS; 0x00 ≈ 1 Hz; C4 ≈ 3.3 Hz | CTS-slot rule | Channel request/ack exchange on J235; CTS deadline; 0x04/0x05 semantics |

@@ -35,8 +35,20 @@
       "required": ["type", "decode", "length"],
       "properties": {
         "type": {"$ref": "#/$defs/byte"},
-        "decode": {"enum": ["fold"]},
-        "length": {"type": "integer", "minimum": 1, "maximum": 64}
+        "decode": {"enum": ["fold", "unkey", "decrypt"], "description": "decrypt: remove the per-frame key and the key stream, then read fields as plaintext (protocol.md §3.3). unkey: remove only the per-frame key. fold: the older pairwise reading (§3.2)."},
+        "keystream": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["xor", "start"],
+          "description": "decrypt only. S[i] = xor ^ ((start - i + adjust[i]) mod 64) for payload byte i >= 1.",
+          "properties": {
+            "xor": {"$ref": "#/$defs/byte"},
+            "start": {"type": "integer", "minimum": 0, "maximum": 255},
+            "adjust": {"type": "object", "propertyNames": {"pattern": "^[0-9]+$"}, "additionalProperties": {"type": "integer", "minimum": -63, "maximum": 63}}
+          }
+        },
+        "length": {"type": "integer", "minimum": 1, "maximum": 64, "description": "Decoded length: 33 for unkey C4, 16 for fold."},
+        "fold_template": {"type": "string", "pattern": "^([0-9a-fA-F]{2})+$", "description": "unkey only: a real unkeyed payload of this tub, used to rebuild frames from legacy fold-only logs."}
       }
     },
     "commands": {

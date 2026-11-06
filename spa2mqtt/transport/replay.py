@@ -5,8 +5,12 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..captures import CaptureRecord, read_capture
+
+if TYPE_CHECKING:
+    from ..definitions.model import TubDefinition
 from .base import TransmitForbidden
 
 
@@ -16,16 +20,19 @@ class ReplayTransport:
     ``speed`` 0 replays as fast as possible; 1.0 honours the recorded timestamps.
     """
 
-    def __init__(self, path: str | Path, speed: float = 0.0, status_type: int = 0xC4) -> None:
+    def __init__(
+        self, path: str | Path, speed: float = 0.0, status_type: int = 0xC4, definition: TubDefinition | None = None
+    ) -> None:
         self.path = Path(path)
         self.speed = speed
-        self.status_type = status_type
+        self.status_type = definition.status_type if definition is not None else status_type
+        self.definition = definition
         self._records: Iterator[CaptureRecord] | None = None
         self._last_ts: float | None = None
         self.writes_attempted = 0
 
     async def connect(self) -> None:
-        self._records = iter(read_capture(self.path, status_type=self.status_type))
+        self._records = iter(read_capture(self.path, status_type=self.status_type, definition=self.definition))
 
     async def read(self) -> bytes:
         if self._records is None:

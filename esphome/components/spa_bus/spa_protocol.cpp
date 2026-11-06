@@ -109,6 +109,13 @@ size_t fold(const uint8_t *payload, size_t len, uint8_t *out) {
   return n;
 }
 
+size_t unkey(const uint8_t *payload, size_t len, uint8_t *out) {
+  if (len == 0) return 0;
+  const uint8_t k = payload[0];
+  for (size_t i = 0; i < len; i++) out[i] = payload[i] ^ k;
+  return len;
+}
+
 void cc_encode(uint8_t code, uint8_t key, uint8_t out[2]) {
   out[0] = key;
   out[1] = key ^ 0xE0 ^ code;

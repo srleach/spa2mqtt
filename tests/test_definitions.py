@@ -59,7 +59,7 @@ def _raw() -> dict[str, Any]:
     [
         (lambda r: r["entities"][0].update(field="nope"), "unknown field"),
         (lambda r: r["entities"].append(dict(r["entities"][0])), "duplicate entity key"),
-        (lambda r: r["fields"]["hour"].update(byte=20), "beyond status length"),
+        (lambda r: r["fields"]["hour"].update(byte=40), "beyond status length"),
         (lambda r: r["fields"].update(bad={"byte": 0, "bit": 1, "scale": 2, "status": "inferred"}), "schema"),
         (lambda r: r["entities"][7].update(press="nope"), "unknown button"),
         (lambda r: r.update(protocol="something_else"), "schema"),
@@ -78,11 +78,32 @@ def test_unknown_definition_name() -> None:
         load_definition("no_such_tub")
 
 
+def _unkeyed(**bytes_at: int) -> bytes:
+    out = bytearray(33)
+    for k, v in bytes_at.items():
+        out[int(k[1:])] = v
+    return bytes(out)
+
+
 def test_field_transforms(j235: Any) -> None:
     f = j235.fields
-    assert f["water_temperature"].decode(bytes([0] * 5 + [0x4F] + [0] * 10)) == 38.5
-    assert f["hour"].decode(bytes([0x13] + [0] * 15)) == 21
-    assert f["pump_1_speed"].decode(bytes([0, 0, 0x13] + [0] * 13)) == "high"
-    assert f["year"].decode(bytes([0] * 9 + [26] + [0] * 6)) == 2026
-    assert f["heater"].decode(bytes([0] * 10 + [0x40] + [0] * 5)) is True
+    # field transforms read decrypted plaintext
+    assert f["water_temperature"].decode(_unkeyed(b10=77)) == 38.5
+    assert f["hour"].decode(_unkeyed(b1=21)) == 21
+    assert f["pump_1_speed"].decode(_unkeyed(b5=0x13)) == "high"
+    assert f["year"].decode(_unkeyed(b19=26)) == 2026
+    assert f["heater"].decode(_unkeyed(b21=0x40)) is True
+    assert f["day_of_month"].decode(_unkeyed(b14=4 << 3)) == 4
+    assert f["month"].decode(_unkeyed(b15=11)) == 11
     assert f["hour"].decode(b"") is None
+
+
+def test_keystream(j235: Any) -> None:
+    s = j235.status_stream
+    assert j235.status_decode == "decrypt" and len(s) == 33 and s[0] == 0
+    assert all(s[i] == 0x19 ^ ((31 - i) % 64) for i in range(1, 33) if i not in (5, 14, 15, 22))
+    assert all(s[i] == 0x19 ^ ((31 - i - 8) % 64) for i in (5, 14, 15, 22))
+
+
+def test_fold_template_matches_length(j235: Any) -> None:
+    assert j235.fold_template is not None and len(j235.fold_template) == j235.status_length

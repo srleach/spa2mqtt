@@ -125,11 +125,14 @@ class TubDefinition:
     temperature_unit: str
     status_type: int
     status_length: int
+    status_decode: str
     command_type: int | None
     buttons: dict[str, int]
     fields: dict[str, FieldDef]
     entities: tuple[EntityDef, ...]
     bus: BusConfig = BusConfig()
+    fold_template: bytes | None = None
+    status_stream: bytes | None = None  # decrypt: per-byte key stream S
     aliases: tuple[str, ...] = ()
     description: str = ""
     source_path: str = ""
@@ -141,4 +144,29 @@ class TubDefinition:
         raise KeyError(key)
 
     def decode_status(self, decoded: bytes) -> dict[str, FieldValue]:
+        """Decode an already-unkeyed (or folded, per ``status_decode``) payload."""
         return {k: f.decode(decoded) for k, f in self.fields.items()}
+
+    def decode_payload(self, payload: bytes) -> bytes:
+        """Raw status payload -> the bytes the field map indexes (per ``status_decode``)."""
+        from ..protocol.cipher import decrypt, fold, unkey
+
+        if self.status_decode == "decrypt":
+            assert self.status_stream is not None
+            return decrypt(payload, self.status_stream)
+        if self.status_decode == "unkey":
+            return unkey(payload)
+        return fold(payload)
+
+    def byte_masks(self) -> dict[int, int]:
+        """Which bits of which decoded byte each field reads (for :func:`unkeyed_from_fold`)."""
+        masks: dict[int, int] = {}
+        for f in self.fields.values():
+            if f.bit is not None:
+                width_mask = 1 << f.bit
+            else:
+                width_mask = (f.mask if f.mask is not None else (1 << (8 * f.length)) - 1) << f.shift
+            for k in range(f.length):
+                byte = f.byte + f.length - 1 - k
+                masks[byte] = masks.get(byte, 0) | ((width_mask >> (8 * k)) & 0xFF)
+        return masks

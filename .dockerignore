@@ -1,0 +1,44 @@
+# Keep the build context small. The image needs only pyproject.toml, README.md,
+# spa2mqtt/ and definitions/. Everything else is excluded so that it cannot leak
+# into the image or invalidate the build cache.
+.git
+.github
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose*.yml
+compose*.yml
+
+# Local configuration can contain broker passwords. Never send it to the builder.
+config.yml
+.env
+*.env
+
+# Tests, capture fixtures, research and tools are not needed at runtime.
+tests
+tools
+esphome
+.esphome
+
+# Documentation sources and MkDocs build output.
+docs
+site
+mkdocs.yml
+
+# Caches and build output.
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.venv
+venv
+build
+dist
+*.egg-info
+*.log
+*.csv
+
+# Deployment examples and docs tooling are not part of the image.
+deploy
+requirements-docs.txt

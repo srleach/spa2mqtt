@@ -1,13 +1,31 @@
+# Development compose: builds the image from this checkout.
+# To run a release, use deploy/docker-compose.yml (published image) instead.
+#
+#   cp deploy/.env.example .env     # then edit .env
+#   docker compose up -d --build
+#
+# Portainer can also deploy this file as a "Stack from repository" (it builds on the host).
+# It has no bind mounts by default, so it works under Home Assistant OS.
+
 services:
   spa2mqtt:
     build: .
+    image: spa2mqtt:dev
     container_name: spa2mqtt
     restart: unless-stopped
-    volumes:
-      - ./config.yml:/app/config.yml:ro
+    # Values come from the shell, from .env next to this file, or from Portainer's
+    # environment variables. Empty values fall back to config.yml or the built-in defaults.
     environment:
-      # Optional overrides; config.yml is preferred.
-      - SPA_IP=${SPA_IP:-}
-      - SPA_PORT=${SPA_PORT:-}
-      - SPA_TRANSMIT=${SPA_TRANSMIT:-}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      SPA_IP: ${SPA_IP:-}
+      SPA_PORT: ${SPA_PORT:-}
+      SPA_DEFINITION: ${SPA_DEFINITION:-}
+      # SAFETY: false = receive-only. This line overrides spa.transmit in config.yml.
+      SPA_TRANSMIT: ${SPA_TRANSMIT:-false}
+      MQTT_BROKER: ${MQTT_BROKER:-}
+      MQTT_PORT: ${MQTT_PORT:-}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    # To use a config.yml (cp config.yml.example config.yml), uncomment:
+    # volumes:
+    #   - ./config.yml:/app/config.yml:ro

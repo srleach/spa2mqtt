@@ -1,5 +1,5 @@
 Warning: Config file not found. Using some defaults
-INFO:spa2mqtt.spas.base.communicator.communicator:Instantiated default communicator with target 192.168.100.47:4257
+INFO:spa2mqtt.spas.base.communicator.communicator:Instantiated default communicator with target 192.0.2.1:4257
 INFO:spa2mqtt.spas.base.communicator.communicator:Attaching update handler.
 INFO:spa2mqtt.spas.base.communicator.communicator:Connected to spa.
 2025-05-21 11:26:28.383793_: 7e21ffaf230000000000000002003c0000ff0002003c0000ff0002003c0000ff008d7e

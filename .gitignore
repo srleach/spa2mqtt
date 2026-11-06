@@ -180,5 +180,10 @@ config.yml
 # Capture fixtures are test data, keep them despite the *.log / *.csv ignores above
 !tests/fixtures/captures/**
 
-# ESPHome build output
+# ESPHome build output and secrets
 .esphome/
+secrets.yaml
+
+# Local environment files (deploy/.env.example is the template)
+*.env
+!deploy/.env.example

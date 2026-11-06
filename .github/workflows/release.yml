@@ -1,0 +1,190 @@
+# Release: tag a semver version and publish the container image.
+#
+# On every push to main:
+#   0. "ci" runs the full CI workflow (ci.yml) on this commit. Nothing is tagged unless it passes.
+#   1. "version" computes the next version from the commits since the last vX.Y.Z tag
+#      (tools/release/next_version.py), pushes an annotated tag and creates a GitHub Release.
+#   2. "image" builds the multi-arch image and pushes it to ghcr.io/srleach/spa2mqtt.
+#
+# A tag pushed by GITHUB_TOKEN does not start other workflows, so the image is built here,
+# in the same run, and not in a separate "on: push: tags" workflow.
+#
+# A person can also push a vX.Y.Z tag by hand. Then "version" only reads the version from
+# the tag (it creates no new tag) and "image" builds that tag.
+#
+# Add "[skip release]" to the merge commit message (or the PR title) to merge without a release.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+# One release at a time. A second merge waits for the first to finish, so two runs never
+# compute the same version. Runs are never cancelled half way through a release.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  ci:
+    name: CI
+    # The same checks as on pull requests, on the exact commit that would be released.
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  version:
+    name: Compute version and tag
+    needs: ci
+    runs-on: ubuntu-latest
+    # Releases come only from main or from a version tag, never from other branches.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write  # push the tag and create the GitHub Release
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      latest: ${{ steps.version.outputs.latest }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # Full history and all tags, so the script can find the previous release tag.
+          fetch-depth: 0
+          # Keep GITHUB_TOKEN available to "git push" for the new tag.
+          persist-credentials: true
+
+      - name: Compute version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "$REF_TYPE" = "tag" ]; then
+            # A tag pushed by hand: the tag is the version.
+            if ! [[ "$REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "::notice::Tag $REF_NAME is not vX.Y.Z; no release."
+              version=""
+            else
+              version="${REF_NAME#v}"
+            fi
+          else
+            version="$(python3 tools/release/next_version.py --git)"
+          fi
+
+          latest=false
+          if [ -n "$version" ]; then
+            # Tag "latest" only when this is the highest release, so a hand-pushed
+            # patch tag for an older line does not replace "latest".
+            highest="$( { git tag --list 'v*.*.*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; echo "v$version"; } \
+              | sort -V | tail -n 1)"
+            if [ "$highest" = "v$version" ]; then latest=true; fi
+            echo "::notice::Release version $version (latest=$latest)"
+          else
+            echo "::notice::No release for this push."
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        if: steps.version.outputs.version != '' && github.ref_type == 'branch'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::Tag $tag already exists. Check the previous release run."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "spa2mqtt $tag" "$GITHUB_SHA"
+          git push origin "refs/tags/$tag"
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          LATEST: ${{ steps.version.outputs.latest }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::Release $tag already exists; leaving it as it is."
+            exit 0
+          fi
+          gh release create "$tag" --verify-tag --generate-notes --title "$tag" --latest="$LATEST"
+
+  image:
+    name: Build and push image
+    needs: version
+    if: needs.version.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # push to ghcr.io
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # Build exactly the tagged commit.
+          ref: v${{ needs.version.outputs.version }}
+          persist-credentials: false
+
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ env.IMAGE }}
+          # "latest" is set below from the version job, not from the git ref.
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.version.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.version.outputs.version }}
+            type=raw,value=latest,enable=${{ needs.version.outputs.latest == 'true' }}
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=spa2mqtt
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.documentation=https://srleach.github.io/spa2mqtt/
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          build-args: |
+            VERSION=${{ needs.version.outputs.version }}
+            REVISION=${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Smoke test the pushed image
+        env:
+          REF: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+        run: docker run --rm "$REF" spa2mqtt validate

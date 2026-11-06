@@ -1,10 +1,11 @@
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling>=1.24", "hatch-vcs>=0.4", "setuptools-scm>=9.2"]
 build-backend = "hatchling.build"
 
 [project]
 name = "spa2mqtt"
-version = "2.0.0"
+# The version comes from the newest vX.Y.Z git tag (hatch-vcs). See [tool.hatch.version].
+dynamic = ["version"]
 description = "Bridge Balboa-family (Jacuzzi/Sundance encrypted) hot-tub RS485 buses to MQTT / Home Assistant"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,6 +29,18 @@ dev = [
 
 [project.scripts]
 spa2mqtt = "spa2mqtt.__main__:main"
+
+[tool.hatch.version]
+source = "vcs"
+# Used when there is no git metadata at all (for example an sdist without .git).
+# The Dockerfile sets SETUPTOOLS_SCM_PRETEND_VERSION instead, because .git is not in the build context.
+# tools/release/next_version.py also reads this value as the first release version.
+fallback-version = "2.0.0"
+
+[tool.hatch.version.raw-options.scm.git]
+# Only strict vX.Y.Z tags are release tags. This skips other tags such as "legacy-v0".
+# setuptools-scm >= 9.2 reads this key (older releases used "git_describe_command").
+describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "v[0-9]*.[0-9]*.[0-9]*", "--exclude", "*-*"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["spa2mqtt"]

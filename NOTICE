@@ -1,0 +1,23 @@
+spa2mqtt
+Copyright (c) 2025-2026 Sean Leach and contributors. Licensed under the MIT License (LICENSE).
+
+Acknowledgements
+----------------
+spa2mqtt is an independent implementation. Its protocol knowledge builds on
+their public reverse-engineering work, which is cited in docs/protocol.md and
+docs/research-notes.md:
+
+* HyperActiveJ/sundance780-jacuzzi-balboa-rs485-tcp  (Sundance 780 / encrypted status)
+* dhmsjs/pyjacuzzi                                   (Jacuzzi / Prolink)
+* garbled1/pybalboa                                  (Balboa framing and CRC; Apache-2.0)
+* ccutrer/balboa_worldwide_app                       (Balboa protocol documentation)
+* jackbrown1993/Jacuzzi-RS485                         (Jacuzzi RS485)
+* Iraithium/sundance-rs485-controller                (ESPHome prior art)
+
+Test fixtures under tests/fixtures/captures/ are recordings of bus traffic from the
+maintainer's tub and from community contributors.
+
+Trademarks
+----------
+Jacuzzi, Balboa, Sundance, Prolink and other names are trademarks of their respective
+owners. spa2mqtt is not affiliated with, endorsed by or supported by them.

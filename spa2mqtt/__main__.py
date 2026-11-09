@@ -29,7 +29,9 @@ def main(argv: list[str] | None = None) -> int:
     p_mon.add_argument("-p", "--port", type=int, default=8899)
     p_mon.add_argument("-d", "--definition", default="jacuzzi_j235")
     p_mon.add_argument("-i", "--interval", type=float, default=10.0, help="seconds between status reports")
-    p_mon.add_argument("--record", metavar="FILE", help="append a raw capture (tools/capture.py format)")
+    p_mon.add_argument(
+        "--record", metavar="FILE", help="append a raw capture (tools/capture.py format); - writes it to stdout"
+    )
     p_mon.add_argument("--json", action="store_true", help="JSON lines instead of text")
     p_mon.add_argument("--quiet-changes", action="store_true", help="only periodic reports")
     p_mon.add_argument("--describe", action="store_true", help="show each field's note in reports")
@@ -132,7 +134,7 @@ def _monitor(args: argparse.Namespace) -> int:
         pass
     finally:
         mon.report()
-        if record is not None:
+        if record is not None and record is not sys.stdout:
             record.close()
             print(f"raw capture appended to {args.record}")
     return 0

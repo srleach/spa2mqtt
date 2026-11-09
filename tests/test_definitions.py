@@ -107,3 +107,27 @@ def test_keystream(j235: Any) -> None:
 
 def test_fold_template_matches_length(j235: Any) -> None:
     assert j235.fold_template is not None and len(j235.fold_template) == j235.status_length
+
+
+def test_j345_legacy_alias_resolves() -> None:
+    # the name the pre-rewrite definition had; the owner's existing stack still sets it
+    assert load_definition("jacuzzi_j335_unencrypted_farenheit").id == "jacuzzi_j345"
+
+
+def test_no_name_is_claimed_by_two_definitions() -> None:
+    claimed: dict[str, Path] = {}
+    for path in sorted(set(available_definitions().values())):
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for name in [raw["id"], *raw.get("aliases", [])]:
+            assert name not in claimed, f"{name} is in {claimed.get(name)} and {path}"
+            claimed[name] = path
+    assert {"jacuzzi_j235", "jacuzzi_j345"} <= set(claimed)
+
+
+def test_j235_uses_none_of_the_plain_features(j235: Any) -> None:
+    assert j235.protocol == "balboa_encrypted" and j235.command_encode == "cc_xor"
+    assert j235.bus.mode == "claim" and j235.bus.client_address is None and j235.bus.hello is None
+    assert j235.extra_frames == {} and j235.direct_commands == {} and j235.button_meta == {}
+    assert all(f.frame == "status" for f in j235.fields.values())
+    assert list(j235.decode_status(bytes(33))) == list(j235.fields)
+    assert j235.buttons == {"temp_up": 0x01, "temp_down": 0x02, "pump_1": 0x04, "pump_2": 0x05, "light": 0x12}

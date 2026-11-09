@@ -1,7 +1,8 @@
 """Capture file formats.
 
 * ``.log``: ``<epoch> RX <hex>`` and ``<epoch> MARK <label>`` lines (tools/capture.py).
-  Text after ``#`` is a comment.
+  Text after ``#`` is a comment. Any other line is skipped, so a container log copied from
+  ``spa2mqtt monitor --record -`` (capture lines mixed with the monitor's reports) reads too.
 * ``.csv``: legacy decoded status payloads (16 comma-separated ints per row, fold-decoded).
   These are re-encoded into synthetic status frames with a varying key so the whole pipeline can
   be exercised. With a per-byte (``unkey``) definition the frames are rebuilt from the
@@ -38,7 +39,7 @@ def read_capture(
     if path.suffix == ".csv":
         yield from _read_decoded_csv(path, status_type, definition)
         return
-    with path.open(encoding="ascii") as fh:
+    with path.open(encoding="utf-8", errors="replace") as fh:
         for line in fh:
             line = line.split("#", 1)[0].strip()
             if not line:

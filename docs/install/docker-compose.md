@@ -72,8 +72,8 @@ docker compose up -d
 Docker pulls the image and starts the container in the background. The container
 restarts by itself after a reboot or a crash (`restart: unless-stopped`).
 
-In Home Assistant, open **Settings > Devices & services > MQTT**. A device named
-*Jacuzzi J235* appears within a few seconds. Its buttons and the setpoint show as
+In Home Assistant, open **Settings > Devices & services > MQTT**. A device named after
+the tub definition, for example *Jacuzzi J235*, appears within a few seconds. Its buttons and the setpoint show as
 unavailable while transmit is off. That is expected.
 
 ## Read the logs
@@ -97,6 +97,15 @@ docker compose stop spa2mqtt
 docker compose run --rm spa2mqtt spa2mqtt monitor 192.168.1.100
 docker compose start spa2mqtt
 ```
+
+The monitor does not read `.env`. Add `-p PORT` and `-d DEFINITION` if yours are not
+`8899` and `jacuzzi_j235`. For a Jacuzzi J345 behind a ProLink module:
+
+```bash
+docker compose run --rm spa2mqtt spa2mqtt monitor 192.168.1.50 -p 4257 -d jacuzzi_j345
+```
+
+The [J345 guide](../tubs/jacuzzi-j345.md) has the `.env` values for that tub.
 
 See [Monitor and capture](../monitor-and-capture.md) for the monitor's options.
 

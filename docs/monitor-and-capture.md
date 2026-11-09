@@ -50,7 +50,7 @@ The monitor also never connects to MQTT, so Home Assistant sees nothing.
 | `--describe` | off | Show each field's note in the reports |
 | `--quiet-changes` | off | Print only the periodic reports, not each change |
 | `--json` | off | Print JSON lines instead of text, for scripts |
-| `--record FILE` | | Also append the raw bytes to `FILE`, in the capture format below |
+| `--record FILE` | | Also append the raw bytes to `FILE`, in the capture format below. `--record -` writes them to standard output, between the reports |
 
 Give exactly one source: `HOST`, `--serial` or `--replay`.
 
@@ -61,6 +61,11 @@ record, mount a directory and run as your own user:
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/captures" \
   ghcr.io/srleach/spa2mqtt:2 spa2mqtt monitor 192.168.1.100 --record /captures/session.log
 ```
+
+Where you cannot mount a directory, for example Portainer under Home Assistant OS, use
+`--record -`. The capture lines then appear in the container log, mixed with the reports.
+Copy the log into a file: `spa2mqtt replay` and `spa2mqtt monitor --replay` read the
+capture lines and skip everything else.
 
 ### What it prints
 
@@ -128,7 +133,9 @@ passwords. Read your labels before you share the file.
 2. Or open a pull request that adds the file to
    [`tests/fixtures/captures/raw/`](https://github.com/srleach/spa2mqtt/tree/main/tests/fixtures/captures/raw).
    The test suite replays every capture there through the decoder. Add the expected
-   values to `tests/test_replay.py` if you know them.
+   values to `tests/test_replay.py` if you know them. That folder is for tubs of the
+   encrypted family, because its captures are also decoded with the J235 definition. A
+   capture of another family goes in its own folder under `tests/fixtures/captures/`.
 
 To decode a capture yourself:
 

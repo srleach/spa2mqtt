@@ -23,9 +23,11 @@ implementation are recorded in §11 and in the pull request.
 
 * Lights, filter-cycle programming, menu automation, climate entity. The definition schema
   can express them later; there is no J235 evidence for them yet (protocol.md §9).
-* Unencrypted (0x16) Jacuzzi boards. The schema has a `plain` codec slot. The legacy
-  `jacuzzi_j335_unencrypted_*` debug definitions are not ported (debug-only, unverified,
-  wrong message type).
+* Unencrypted (0x16) Jacuzzi boards on a direct RS485 tap, and on ESPHome. Since §11 row
+  12 the bridge supports one such tub, the J345, through its ProLink module only
+  (`protocol: jacuzzi_plain`, [protocol-plain.md](protocol-plain.md)). The legacy
+  `jacuzzi_j335_unencrypted_*` debug definitions were not ported (debug-only, unverified,
+  wrong message type): the J345 definition was written from the captures.
 
 ## 2. Safety model (transmit)
 
@@ -86,7 +88,8 @@ spa2mqtt/
   tub/
     decoder.py           status payload → {field: value} using FieldDef transforms
     state.py             TubState: last values, change detection, timestamps
-    bus.py               BusClient state machine (LISTEN/CLAIM/REQUESTED/READY), BusWriter
+    bus.py               BusClient state machine (LISTEN/CLAIM/REQUESTED/READY), BusWriter,
+                         DirectBusClient (fixed address, no claim: plain boards via ProLink)
     control.py           CommandQueue, SetpointController (press loop with retries)
   ha/
     discovery.py         pure functions: definition + install config → discovery payloads
@@ -94,6 +97,7 @@ spa2mqtt/
 definitions/
   tub-definition.schema.json
   jacuzzi_j235.yaml
+  jacuzzi_j345.yaml      plain protocol, bridge only
 esphome/
   components/spa_bus/    __init__.py, sensor.py, binary_sensor.py, button.py, number.py,
                          text_sensor.py, spa_bus.{h,cpp}, spa_protocol.{h,cpp} (framework-free)
@@ -148,7 +152,7 @@ bus:                                    # only used when transmit is enabled
 
 status:
   type: 0xC4
-  decode: fold                          # fold | plain
+  decode: fold                          # fold | unkey | decrypt (J235 today) | plain (jacuzzi_plain)
   length: 16                            # decoded payload bytes
 
 commands:
@@ -249,6 +253,26 @@ Implemented as in protocol.md §4, with these choices:
   This replaces the legacy approach of queueing *N* presses at once and assuming each one
   lands.
 * Buttons enqueue a single press. There is no de-duplication; HA buttons are momentary.
+
+**Direct bus mode** (`bus.mode: direct`, protocol-plain.md §6–§7). A ProLink module's TCP
+stream has no CTS, so `DirectBusClient` replaces the claim logic for `jacuzzi_plain`
+definitions:
+
+* Frames are sent from the fixed `bus.client_address`. There is no channel state.
+* The queue holds whole frames (button presses and direct commands), at most 8.
+* One frame is released per `send_gap_frames` status frames. Only status frames count, so
+  the spacing follows the tub's own cadence.
+* `bus.hello`, when set, is sent once per connection, immediately before the first queued
+  frame. Nothing is sent at start-up.
+* `Tub.on_connect()` (called by the app after each transport connect) clears the queue and
+  re-arms the hello, so a command queued before an outage is not sent after it.
+* A `number` with `control.type: direct` is one frame with the value rounded to `step`. A
+  value outside `min`..`max` is refused, not clamped. There is no `SetpointController` and
+  no retry: pyjacuzzi sent each command once, and all took.
+* A direct command may carry `requires` (status bit fields and the value each must have).
+  `Tub` refuses the command (`CommandBlocked`) when the last status frame disagrees or none
+  has been decoded. The J345 uses it to block the setpoint in Celsius mode.
+* Both clients hand frames to the same `BusWriter`, which stays the only writer.
 
 ## 7. ESPHome component (`spa_bus`)
 
@@ -367,9 +391,11 @@ jobs `python`, `cpp`, `esphome`.
 | 5 | Keep hypothesis-backed legacy entities (main/secondary pump, manual circulation). | They are the minimum set HA uses today. They are flagged `status: hypothesis` and documented. |
 | 6 | Definitions are YAML with a JSON Schema in the repo root `definitions/`. | Human-editable; one source for Python and ESPHome codegen. |
 | 7 | ESPHome entities are declared by `entity:` key plus a generated package, rather than auto-created by the hub. | Idiomatic ESPHome (users can rename, filter, hide); explicit IDs; still zero duplication via the package. |
-| 8 | Legacy unencrypted J335 definitions are not ported. | Debug-only, unverified, used the wrong message type for plain boards. |
+| 8 | Legacy unencrypted J335 definitions are not ported. | Debug-only, unverified, used the wrong message type for plain boards. The J345 definition (§11 row 12) was written from captures instead. |
 | 9 | Temperature unit is configuration, not decoded. | No unit flag is known on encrypted boards (protocol.md §8). |
 | 10 | Wire format for captures is `<epoch> RX <hex>` / `MARK`. | Same file from the capture tool, the replay transport, and the tests. |
+| 11 | A tub nobody on the project can test may transmit only frames a capture shows working. Every button and direct command carries a status and evidence, and a test enumerates what the definition can emit. | The J345 is driven on the strength of its owner's pyjacuzzi capture. A decode error shows a wrong value; a wrong frame acts on someone else's tub. |
+| 12 | The Home Assistant device name and identifier default from the tub definition (`ha:`, else `name` and `id`). The J235 pins `185569045` in its YAML. | Environment-only installs (Portainer on Home Assistant OS) cannot set `ha:` keys, and a second tub must not appear as "Jacuzzi J235". |
 
 ## 11. Deviations from this plan
 
@@ -385,4 +411,5 @@ jobs `python`, `cpp`, `esphome`.
 | 9 | Set-mode awareness: `control.set_mode_field` names the bit that shows the topside's set screen. The controller treats a press that opens set mode as the wake press and steps on the next frame. It also no longer counts down while its press is still queued for a bus slot. | protocol.md §7a. The queued-press guard fixes a real overshoot found by the new tests (a slow channel grant caused duplicate presses). Ported to the C++ core. |
 | 11 | Status decoding moved from the pairwise fold to per-byte decryption (`status.decode: decrypt` with a `keystream`). Fields read plaintext with no per-field XOR. Legacy fold-only logs are rebuilt through `status.fold_template`. | Raw captures showed the fold loses data when both bytes of a pair change (protocol.md §3.3). The fix also makes the field map portable to Sundance boards. It supersedes decision 1. |
 | 10 | `spa2mqtt monitor`: a standalone, read-only live decoder for the terminal (text or JSON lines, optional raw recording). | The owner's first contact with the real tub runs without MQTT and without any transmit path. |
-| 8 | Unencrypted Jacuzzi captures from unmerged PR 12 were recovered into `tests/fixtures/captures/unencrypted/` but are not decoded. | They evidence the `plain` codec non-goal; no J235 relevance. |
+| 8 | ~~Unencrypted Jacuzzi captures from unmerged PR 12 were recovered into `tests/fixtures/captures/unencrypted/` but are not decoded.~~ Superseded by row 12. | They evidenced the `plain` codec non-goal; no J235 relevance. |
+| 12 | The plain protocol is supported for one tub, the Jacuzzi J345 behind a ProLink module: `protocol: jacuzzi_plain`, `status.decode: plain`, a second decoded frame (`extra_frames`, lights 0x23), `commands.direct`, and `bus.mode: direct`. Bridge only: the ESPHome loader rejects the protocol and the package generator skips it. No C++ changed. | A contributor's tub, with five captures that include a pyjacuzzi session of working commands. The ProLink stream has no CTS, so the claim logic cannot send to it. |

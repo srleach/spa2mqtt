@@ -3,18 +3,31 @@
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 
-from ..definitions.model import ButtonEntity, FieldValue, NumberEntity, TubDefinition
+from ..definitions.model import (
+    ButtonEntity,
+    DirectCommand,
+    DirectControl,
+    FieldValue,
+    NumberEntity,
+    StepperControl,
+    TubDefinition,
+)
 from ..protocol.frame import Frame
 from ..transport.base import TransmitForbidden
-from .bus import BusClient
+from .bus import BOARD_MID, BusClient, DirectBusClient
 from .control import SetpointController
 from .state import TubState
 
 log = logging.getLogger(__name__)
 
-BOARD_MID = 0xAF
+
+class CommandBlocked(TransmitForbidden):
+    """Transmit is on, but the tub's state does not allow this command (``requires``)."""
+
+
 Listener = Callable[[dict[str, FieldValue]], None]
 
 
@@ -23,11 +36,22 @@ class Tub:
         self.definition = definition
         self.transmit = transmit
         self.state = state or TubState()
-        self.bus = BusClient(definition.bus, definition.command_type, transmit)
+        self.bus: BusClient | DirectBusClient
+        if definition.bus.mode == "direct":
+            hello = definition.bus.hello
+            self.bus = DirectBusClient(
+                definition.bus,
+                definition.command_type,
+                transmit,
+                definition.status_type,
+                hello=self._direct_frame(definition.direct_commands[hello]) if hello else None,
+            )
+        else:
+            self.bus = BusClient(definition.bus, definition.command_type, transmit)
         self._listeners: list[Listener] = []
         self.setpoints: dict[str, SetpointController] = {}
         for e in definition.entities:
-            if isinstance(e, NumberEntity):
+            if isinstance(e, NumberEntity) and isinstance(e.control, StepperControl):
                 self.setpoints[e.key] = SetpointController(
                     self._press_code,
                     definition.buttons[e.control.up],
@@ -60,7 +84,7 @@ class Tub:
             changed = self.state.update(values)
             for key, ctl in self.setpoints.items():
                 ent = self.definition.entity(key)
-                assert isinstance(ent, NumberEntity)
+                assert isinstance(ent, NumberEntity) and isinstance(ent.control, StepperControl)
                 sp = values.get(ent.field)
                 mode = values.get(ent.control.set_mode_field) if ent.control.set_mode_field else None
                 ctl.on_status(
@@ -70,7 +94,20 @@ class Tub:
             if changed:
                 for listener in self._listeners:
                     listener(changed)
+        elif frame.mid == BOARD_MID and (extra := self.definition.extra_frame_for(frame.type)) is not None:
+            name, spec = extra
+            if len(frame.payload) < spec.length:
+                self.bad_status_frames += 1
+                return out
+            changed = self.state.merge(self.definition.decode_frame(name, frame.payload))
+            if changed:
+                for listener in self._listeners:
+                    listener(changed)
         return out
+
+    def on_connect(self) -> None:
+        """Call after each transport connect (a direct bus drops stale commands)."""
+        self.bus.on_connect()
 
     # -- commands --------------------------------------------------------------
 
@@ -78,12 +115,43 @@ class Tub:
         ent = self.definition.entity(entity_key)
         if not isinstance(ent, ButtonEntity):
             raise KeyError(f"{entity_key} is not a button")
-        self._press_code(self.definition.buttons[ent.press])
+        if ent.press in self.definition.buttons:
+            self._press_code(self.definition.buttons[ent.press])
+        else:
+            self._send_direct(self.definition.direct_commands[ent.press], None)
 
     def set_number(self, entity_key: str, value: float) -> float:
         if not self.transmit:
             raise TransmitForbidden("transmit disabled; setpoint change ignored")
-        return self.setpoints[entity_key].set_target(value)
+        if entity_key in self.setpoints:
+            return self.setpoints[entity_key].set_target(value)
+        ent = self.definition.entity(entity_key)
+        if not isinstance(ent, NumberEntity) or not isinstance(ent.control, DirectControl):
+            raise KeyError(f"{entity_key} is not a number")
+        if not math.isfinite(value):  # min()/max() would turn NaN into a real setpoint
+            raise ValueError(f"{entity_key}: {value!r} is not a number")
+        if not ent.min <= value <= ent.max:  # one message is one frame here: refuse, never clamp
+            raise ValueError(f"{entity_key}: {value!r} is outside {ent.min:g}..{ent.max:g}")
+        # One frame, no retry: the tub's next status frame shows whether it took effect.
+        target = round(value / ent.step) * ent.step
+        self._send_direct(self.definition.direct_commands[ent.control.command], round(target))
+        log.info("%s: queued %s", entity_key, round(target))
+        return target
 
     def _press_code(self, code: int) -> None:
         self.bus.enqueue_press(code)
+
+    def _direct_frame(self, command: DirectCommand, value: int | None = None) -> Frame:
+        addr = self.definition.bus.client_address
+        assert addr is not None  # the loader requires it with bus.mode direct
+        return Frame(addr, self.definition.bus.client_mid, command.type, command.build(value))
+
+    def _send_direct(self, command: DirectCommand, value: int | None) -> None:
+        if not self.transmit or not isinstance(self.bus, DirectBusClient):
+            raise TransmitForbidden("transmit disabled; command not queued")
+        for fkey, want in command.requires:
+            got = self.state.values.get(fkey)
+            if got is not want:  # None: no status frame decoded yet
+                seen = "not seen yet" if got is None else f"is {got}"
+                raise CommandBlocked(f"{command.key} needs {fkey} = {want}, {fkey} {seen}; command not queued")
+        self.bus.enqueue(self._direct_frame(command, value))

@@ -161,3 +161,20 @@ def test_env_overrides() -> None:
         },
     )
     assert (cfg.transport.host, cfg.transport.port, cfg.transmit, cfg.mqtt_host) == ("10.0.0.5", 1234, True, "mq")
+
+
+def test_default_identity_comes_from_the_definition(j235: TubDefinition) -> None:
+    from spa2mqtt.app import discovery_config
+
+    loaded = load_config(None, env={})
+    assert loaded.device_name is None and loaded.device_identifier is None
+    cfg = discovery_config(loaded, j235)
+    # the J235 keeps the device the v1 bridge created: same values as DiscoveryConfig()'s defaults
+    assert (cfg.device_name, cfg.device_identifier) == ("Jacuzzi J235", "185569045")
+    assert (cfg.device_name, cfg.device_identifier) == (
+        DiscoveryConfig().device_name,
+        DiscoveryConfig().device_identifier,
+    )
+    assert [e.config_topic for e in build_discovery(j235, cfg)] == [
+        e.config_topic for e in build_discovery(j235, DiscoveryConfig())
+    ]

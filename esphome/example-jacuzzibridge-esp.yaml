@@ -5,7 +5,7 @@
 # RS485 uses the board's onboard transceiver on GPIO17 (TX) / GPIO18 (RX), as in the
 # board's archived config. Wire A/B to the tub's RS485 header; 115200 8N1.
 # Step-by-step guide, wiring diagram and safety notes:
-#   https://srleach.github.io/spa2mqtt/esphome/
+#   https://seanrleach.co.uk/spa2mqtt/esphome/
 #
 # Secrets used below (put them in secrets.yaml next to this file):
 #   wifi_ssid, wifi_password, jacuzzibridge_api_key

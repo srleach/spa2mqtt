@@ -10,11 +10,11 @@ tub definitions:
 * **ESPHome component** `spa_bus`: runs on an ESP32 with an RS485 transceiver and exposes the
   same entities natively over the ESPHome API, with no extra box and no cloud.
 
-**Documentation: <https://srleach.github.io/spa2mqtt/>**
+**Documentation: <https://seanrleach.co.uk/spa2mqtt/>**
 
 > **Warning.** A spa contains mains voltage and a large potential fault current. Isolate it
 > at the breaker before you open any panel. Wiring anything into it is at your own risk.
-> Read the [safety page](https://srleach.github.io/spa2mqtt/safety/) first.
+> Read the [safety page](https://seanrleach.co.uk/spa2mqtt/safety/) first.
 
 ## Safety: receive-only by default
 
@@ -43,9 +43,9 @@ curl -fsSL -o .env https://raw.githubusercontent.com/srleach/spa2mqtt/main/deplo
 docker compose up -d
 ```
 
-Guides: [Docker Compose](https://srleach.github.io/spa2mqtt/install/docker-compose/),
-[Portainer](https://srleach.github.io/spa2mqtt/install/portainer/) (including Home
-Assistant OS), [configuration reference](https://srleach.github.io/spa2mqtt/configuration/).
+Guides: [Docker Compose](https://seanrleach.co.uk/spa2mqtt/install/docker-compose/),
+[Portainer](https://seanrleach.co.uk/spa2mqtt/install/portainer/) (including Home
+Assistant OS), [configuration reference](https://seanrleach.co.uk/spa2mqtt/configuration/).
 
 ## Quick start: ESPHome
 
@@ -70,23 +70,23 @@ spa_bus:
 ```
 
 A complete device is in [`esphome/example-jacuzzibridge-esp.yaml`](esphome/example-jacuzzibridge-esp.yaml)
-(Waveshare ESP32-S3-ETH-8DI-8RO). See the [ESPHome guide](https://srleach.github.io/spa2mqtt/esphome/).
+(Waveshare ESP32-S3-ETH-8DI-8RO). See the [ESPHome guide](https://seanrleach.co.uk/spa2mqtt/esphome/).
 
 ## Versions
 
 Every merge to `main` creates a semver release tag `vX.Y.Z` and a multi-arch image
 `ghcr.io/srleach/spa2mqtt` tagged `X.Y.Z`, `X.Y`, `X`, `latest` and `sha-<short>`. Pin the major version
-(`:2`) or a full version. See [Releases and versions](https://srleach.github.io/spa2mqtt/releases/).
+(`:2`) or a full version. See [Releases and versions](https://seanrleach.co.uk/spa2mqtt/releases/).
 
 ## Supported tubs
 
 | Model | Board | Definition | Status |
 |---|---|---|---|
 | Jacuzzi J235 (2018) | encrypted (C4/CC) | `jacuzzi_j235` | Sensors confirmed against labelled captures; transmit path implemented and tested against a simulated board, not yet against the tub |
-| Jacuzzi J345 (J-300 series) | plain (0x16) via ProLink | `jacuzzi_j345` | Bridge only. Decoded from the owner's captures; transmit reproduces captured pyjacuzzi frames; not yet run against the tub by this project. [Guide](https://srleach.github.io/spa2mqtt/tubs/jacuzzi-j345/) |
+| Jacuzzi J345 (J-300 series) | plain (0x16) via ProLink | `jacuzzi_j345` | Bridge only. Decoded from the owner's captures; transmit reproduces captured pyjacuzzi frames; not yet run against the tub by this project. [Guide](https://seanrleach.co.uk/spa2mqtt/tubs/jacuzzi-j345/) |
 
-To add a tub, see [Tub definitions](https://srleach.github.io/spa2mqtt/tub-definitions/) and
-[Monitor and capture](https://srleach.github.io/spa2mqtt/monitor-and-capture/). Captures are
+To add a tub, see [Tub definitions](https://seanrleach.co.uk/spa2mqtt/tub-definitions/) and
+[Monitor and capture](https://seanrleach.co.uk/spa2mqtt/monitor-and-capture/). Captures are
 welcome as issues or pull requests.
 
 ## Development

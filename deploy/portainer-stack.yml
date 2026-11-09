@@ -5,9 +5,9 @@
 # There are no volumes on purpose: Portainer on Home Assistant OS cannot bind-mount files
 # ("mkdir /data: read-only file system").
 #
-# Guide: https://srleach.github.io/spa2mqtt/install/portainer/
+# Guide: https://seanrleach.co.uk/spa2mqtt/install/portainer/
 # Jacuzzi J345 through a ProLink module: SPA_IP = the ProLink's address, SPA_PORT=4257,
-# SPA_DEFINITION=jacuzzi_j345. See https://srleach.github.io/spa2mqtt/tubs/jacuzzi-j345/
+# SPA_DEFINITION=jacuzzi_j345. See https://seanrleach.co.uk/spa2mqtt/tubs/jacuzzi-j345/
 
 services:
   spa2mqtt:

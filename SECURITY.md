@@ -20,4 +20,4 @@ In scope: anything that lets a third party make spa2mqtt transmit on the RS485 b
 or run code in the container or on the ESP32.
 
 Physical and electrical safety of a spa installation is out of scope for this policy; see
-the [safety page](https://srleach.github.io/spa2mqtt/safety/).
+the [safety page](https://seanrleach.co.uk/spa2mqtt/safety/).

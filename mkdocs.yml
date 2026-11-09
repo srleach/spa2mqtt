@@ -4,7 +4,7 @@
 
 site_name: spa2mqtt
 site_description: Bridge the RS485 bus of Balboa-family hot tubs (Jacuzzi, Sundance) to Home Assistant, over MQTT or ESPHome.
-site_url: https://srleach.github.io/spa2mqtt/
+site_url: https://seanrleach.co.uk/spa2mqtt/
 repo_url: https://github.com/srleach/spa2mqtt
 repo_name: srleach/spa2mqtt
 edit_uri: edit/main/docs/

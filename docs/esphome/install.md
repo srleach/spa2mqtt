@@ -128,7 +128,7 @@ text_sensor:
 
 | Platform | J235 entity keys |
 |---|---|
-| `sensor` | `current_temperature`, `setpoint_temperature`, `display_state`, `secondary_value_raw` |
+| `sensor` | `current_temperature`, `setpoint_temperature`, `filter_change_days`, `water_change_days`, `uv_days`, `display_state`, `secondary_value_raw` |
 | `binary_sensor` | `circulation_pump_status`, `secondary_pump_status`, `main_pump_status`, `manual_circulation_call`, `heater_active`, `set_mode_active` |
 | `text_sensor` | `pump_1_speed` |
 | `button` | `temperature_increment`, `temperature_decrement`, `pump_1_button`, `pump_2_button`, `light_button` |

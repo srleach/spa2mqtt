@@ -31,6 +31,7 @@ Every dump-derived number below can be reproduced with
 | **D4** | `…/decoded/2025-05-19T130957Z_epoch1747660197.csv` | 260 rows; topside **menu navigation/editing** session (deleted in `d185ab1`). |
 | **D5** | `…/decoded/2025-05-20T130850Z_epoch1747746530.csv` | 5 rows (deleted in `d185ab1`). |
 | **D6** | `…/decoded/2025-05-20T131044Z_epoch1747746644.csv` | 32 rows (deleted in `d185ab1`). |
+| **D8** | `tests/fixtures/captures/raw/2026-11-09T205918Z_j235_menu_values.log` | Raw wire capture, 75 s, 5 368 frames, idle, taken 2026-11-09 20:59 UTC with `spa2mqtt capture` (read-only). The owner read the topside menu just before: **FC 172, UV 148, H2O 172 changed to 150**, filter cycle 12 am / 4 / 1 hr, heat auto. |
 | **D7** | `tests/fixtures/captures/raw/2026-11-04T220754Z_j235_labelled.log` | **Raw wire capture, 9 min, 51 242 frames, all message types**, with 37 owner-typed `MARK` labels for topside actions (pumps, temp up/down, lights, setpoint to 40). Taken 2026-11-04 22:07 UTC with `tools/capture.py` (receive-only) through the EW11A. Owner labels are typed shortly *after* each action. |
 
 The decoded CSVs (D2–D6) contain the 16-byte pairwise-folded payload only: no headers, no
@@ -160,12 +161,12 @@ is never needed and is not implemented.
 
 ```
 plain[i] = payload[i] ^ payload[0] ^ S[i]          (i = 1 .. 32; plain[0] = 0)
-S[i]     = 0x19 ^ ((31 - i + adjust[i]) mod 64)     adjust[i] = -8 at i = 5, 14, 15, 22; else 0
+S[i]     = 0x19 ^ ((31 - i + adjust[i]) mod 64)     adjust[i] = -8 at i = 5, 6, 14, 15, 22; else 0
 ```
 
 Every field is then a plain read of one byte (or some of its bits), with no per-field constant.
 `S` is pyjacuzzi's key stream (`decrypt()`, key1 = `payload[0] ^ 0x19`, key2 counting down from
-31) with four corrections. [A:decrypt] prints the table.
+31) with five corrections. [A:decrypt] prints the table.
 
 **Why per byte.** After the key is removed, varying data shows up in *both* bytes of some pairs
 (D7: bytes 2 and 3, bytes 28 and 29). The fold merges each pair into one value, so it loses
@@ -180,6 +181,7 @@ December (§5 d7) and what made the "secondary temperature" and the display code
 | 2 | pump 1 running (bit 6), heat demand (bit 5), manual circ (bit 7) | D7 presses | correct on bits 5–7 |
 | 3 | pump 2 (bit 2) | D7 presses | correct on bit 2 |
 | 5 | day of week (bits 2–0), pump 1 speed (4–3), set mode (5) | Five dated J235 captures; D7 presses | **8 lower** |
+| 6 | filter change days | D8 topside FC 172 (the formula gives 164); D7 177 five days earlier | **8 lower** |
 | 10 | water temperature | D7 display 38.5 °C; pyjacuzzi label 102 °F | correct |
 | 14 | day of month (bits 7–3) | D1 16 May, D7 4 Nov; pyjacuzzi label 18 May | **8 lower** |
 | 15 | month (bits 3–0) | D1 May, D7 November; pyjacuzzi label May | **8 lower** |
@@ -187,6 +189,8 @@ December (§5 d7) and what made the "secondary temperature" and the display code
 | 19 | year − 2000 | 2025, 2026 (J235); pyjacuzzi label 2023 | correct |
 | 21 | heater (bit 6) | D7 heating sequence | correct on bit 6 |
 | 22 | minute | Wall clock D3–D6; pyjacuzzi label 2:40 PM | **8 lower** |
+| 24 | water change days | D8 topside H2O 150 | correct |
+| 27 | UV lamp days | D8 topside UV 148 | correct |
 
 Status: **Confirmed** on the bits listed, for the J235. Bytes not listed use the formula without
 correction and are unverified. pyjacuzzi's own "minute `(b & 0x3F) ^ 0x08` for some unknown
@@ -218,6 +222,7 @@ constants), so §5 remains the record of the evidence. The plaintext positions a
 | 2 | bit 7 manual circulation (hypothesis); bit 6 pump 1 running; bit 5 heat demand (hypothesis) | Confirmed (bit 6) |
 | 3 | bit 2 pump 2 | Confirmed |
 | 5 | bits 2–0 day of week (0 = Sunday); bits 4–3 pump 1 speed; bit 5 set mode | Confirmed |
+| 6 | filter change days (topside FC): D8 172, D7 177, D1 127 | Confirmed |
 | 10 | water temperature, raw (°C × 2 on this tub) | Confirmed |
 | 14 | bits 7–3 day of month | Confirmed |
 | 15 | bits 3–0 month | Confirmed |
@@ -225,8 +230,9 @@ constants), so §5 remains the record of the evidence. The plaintext positions a
 | 19 | year − 2000 | Confirmed |
 | 21 | bit 6 heater | Confirmed |
 | 22 | minute | Confirmed |
+| 24 | water change days (topside H2O): D8 150, D7 177, D1 177 | Confirmed |
 | 26 | 0 normal screen, 1 temperature-set screen | Confirmed |
-| 27 | display or alert code: 0x4D (May 2025), 0x99 (Nov 2026) | Hypothesis |
+| 27 | UV lamp days (topside UV): D8 148, D7 153, D1 77. Read before as a display code | Confirmed |
 | 28 | secondary value (meaning unknown) | Hypothesis |
 | 29 | bit 5 follows pump 1 (the flag that HyperActiveJ saw as "+32 while circulating") | Inferred |
 
@@ -335,7 +341,7 @@ Index = folded byte `d[j]` (Model B). The equivalent Model A bytes are `P[5+2j]`
 | 2 | bits 2–0: **day of week** (0 = Sunday) | `d2 & 7` | **Confirmed** | [A:clock]: 18 May 2025 (Sun) 0, 19 May (Mon) 1, 20 May (Tue) 2, 16 May (Fri) 5; D7 4 Nov 2026 (Wed) 3. Also right on the three foreign frames (§3.3). An earlier version of this document said the foreign frames disagreed by one day; that came from pairing them with the fold's wrong year. |
 | 2 | bits 4–3: **pump 1 speed** (0 off, 1 low, 2 high) | `(d2>>3) & 3` | **Confirmed** | D7: press 1 → 0x03→0x0B (low), press 2 → 0x13 (high), press 3 → 0x03 (off) at t≈90/119/143. Heating starts low (t≈454.5); D2's heating window has bit 3 set. The legacy "main pump" bit (`d2` bit 4) is therefore "pump 1 on high". |
 | 2 | bit 5: **set mode active** (topside temperature edit) | `(d2>>5)&1` | **Confirmed** | D7: set by the first temp press and cleared ≈ 5 s after the last (t≈209.9–215.2, 238.2–244.5, 454.5–458.1). D4: set while menu values were edited. |
-| 3 | Menu-editable maintenance value | raw | Unknown | D4: changed 130 → 120 → 118 → 90 as the user edited values in the menu. D2 118, D3 111, D5/D6 101, D7 0x4B (75). SC names d3 "water life remaining days". |
+| 3 | Menu-editable maintenance value | raw | Unknown | D4: changed 130 → 120 → 118 → 90 as the user edited values in the menu. D2 118, D3 111, D5/D6 101, D7 0x4B (75). SC names d3 "water life remaining days". **Resolved by §3.3:** plaintext byte 6 is the filter change countdown (D8). |
 | 4 | constant 0x05 | – | Unknown | 0x05 in every J235 row, D7 included. HJ's "f4 bit 6 = circulation" never occurs on the J235. |
 | 5 | **Water temperature** | `(d5 ^ 0x02) × 0.5` °C | **Confirmed** | D7: 0x4F → 38.5 °C matches the owner's "display 38.5C" mark (t≈50); flickers 38.0/38.5. D2: a heating curve 37.5 → 38.5 around a 38.0 setpoint. Without the XOR the D2 reading would jump 2.5 °C in 10 min, so the XOR stays and PR 17/19 are refuted. Caveat: `^2` is really `^P[16]` (§3.2), constant in all samples. |
 | 6 | constant 0x20 | – | Hypothesis: heat mode | HJ `DECODING.md`: 32 = AUTO (34 ECO, 36 DAY). 0x20 in every J235 row, D7 included. |
@@ -345,7 +351,7 @@ Index = folded byte `d[j]` (Model B). The equivalent Model A bytes are `P[5+2j]`
 | 10 | bit 6: **heater on** | `(d10>>6)&1` | **Confirmed** | D7: after raising the setpoint above the water temperature, heater on at t≈512.8 following pump 1 low and d1 bit 5 (§5 d1). D2 rows 1–51: set only while water < setpoint. SC L327; PJ `P[26]` bit 6. |
 | 10 | bit 7 | – | Hypothesis: heater run-on / auto circulation | D2 rows 47–277 (after the heater bit clears, pump 1 still low). Not exercised in D7. PR 17's "pump map" reading of d10 is refuted by D7 (pumps never touch d10). |
 | 11 | Minute | raw | **Confirmed** | [A:clock] against filename epochs; D7 increments once a minute. |
-| 12 | – | raw | Unknown | 175 (18 May), 179 (19 May), 178 (20 May), 0xB1 (177, D7). SC names it "filter life remaining days". |
+| 12 | – | raw | Unknown | 175 (18 May), 179 (19 May), 178 (20 May), 0xB1 (177, D7). SC names it "filter life remaining days". **Resolved by §3.3:** plaintext byte 24 is the water change countdown (D8). |
 | 13 | **Display / menu state** | raw | Confirmed (it is display state); individual codes Inferred | D7: 0x99 (153) idle, 0x98 while in set mode, the same frames as d2 bit 5. D4: 99 → 100/109/114 in the menu → 113/112 editing → back. Idle value differs by day (90, 99, 98, 153), so the code space is not fully understood. |
 | 14 | **Secondary value** XOR a pump-1 flag | `d14 ^ 0x20` while pump 1 runs | Inferred (flag); value meaning Unknown | D7: bit 5 flips in the same frame as each pump-1 start/stop (t≈90.3, 143.2, 151.8, 154.7, 454.5) while the underlying value keeps counting: 18 → 28 (pump on, 53 s) → 34 (off, 2 min). Under the §3.2 identity this is a flag bit in P[34] XORed onto a value in P[33] (PJ's samples show P[34] = 0x38 vs 0x18 with pump 1). HJ's "+32 while circulating" is the same effect. The value is not °C water (38.5) and not a clock. Exposed raw, disabled by default. PR 17's "hour" reading is refuted. |
 | 15 | Menu value being edited | raw | Inferred | 0 except in D4 rows 109–159 (values 120…160 while d13 = 112/113). |
@@ -413,14 +419,17 @@ unit flag: PJ upstream `39c2834` explicitly leaves it undetermined for C4. Unit 
 |---|---|---|---|
 | Framing | 0x7E flags, LEN semantics, CRC-8 (0x07/0x02/0x02), no escaping, own flags per frame | Valid LEN range 5–64 | – |
 | Cipher | Per-frame key byte; fold ⇔ key-stream identity; key stream with four corrections (§3.3), shared with the Sundance 780 and another encrypted Jacuzzi; CC `[K, K^0xE0^code]` | – | Key stream at bytes not yet tied to a known field |
-| Status C4 | Hour, minute, day of week, day, month, year, water temp, setpoint, heater, pump 1 running + speed, pump 2, set mode, set screen, cadence | heat-demand sequence; pump-1 flag in byte 29 | Manual circ; d10.7; d3, d4, d6, d12; display code byte 27; secondary value byte 28 |
+| Status C4 | Hour, minute, day of week, day, month, year, water temp, setpoint, heater, pump 1 running + speed, pump 2, set mode, set screen, cadence, filter / water / UV countdowns (bytes 6, 24, 27) | heat-demand sequence; pump-1 flag in byte 29 | Manual circ; d10.7; d4, d6; heat mode and filter cycle settings; secondary value byte 28 |
 | Lights CA | brightness, mode codes, R/G/B positions, ≈ 1 Hz | c9 blend phase | c0, c3, c5, c7, c10–13 |
 | Commands | 0x00 idle, 0x01/0x02 temp, 0x04 pump 1, 0x05 pump 2, 0x12 light; press semantics; set-mode first press | – | ClearRay 0x0F, 0x11, menu 0x1E on J235 |
 | Bus | Channel 0x10 = topside; CTS ≈ 45 Hz, CC on every CTS; 0x00 ≈ 1 Hz; C4 ≈ 3.3 Hz | CTS-slot rule | Channel request/ack exchange on J235; CTS deadline; 0x04/0x05 semantics |
 | Physical | EW11A transparent bridging | 115200 8N1 | – |
 
-**Still open after D7:** the maintenance counters (needs the reminder values read from the
-topside menu during a capture), manual circulation and the J235 channel-request handshake.
+**Still open after D8:** the filter cycle settings and heat mode (need a capture while they
+are changed at the topside), manual circulation and the J235 channel-request handshake. The
+FC, H2O and UV countdowns are resolved (bytes 6, 24, 27). In the fold (§5) they sit in d3, d12
+and d13: SC's names for d3 and d12 ("water life", "filter life") are swapped, and the "display
+state" in d13 is mostly the UV countdown.
 The handshake can only be observed by transmitting, which is out of scope for development.
 `tools/capture.py` produces the capture format; drop files into `tests/fixtures/captures/raw/`
 and the replay tests pick them up.

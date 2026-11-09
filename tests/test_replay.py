@@ -18,7 +18,7 @@ from spa2mqtt.protocol import Frame, FrameDecoder, fold
 from spa2mqtt.transport import ReplayTransport, TransmitForbidden
 from spa2mqtt.tub import BusWriter, Tub
 
-from .conftest import DECODED, RAW_D1, RAW_D7, frames_of
+from .conftest import DECODED, RAW_D1, RAW_D7, RAW_D8, frames_of
 
 
 def run_tub(definition: TubDefinition, frames: list[Frame]) -> tuple[Tub, list[dict[str, Any]]]:
@@ -47,6 +47,25 @@ def test_d1_state(j235: TubDefinition) -> None:
 
 
 # --- D7: owner's labelled raw capture, 2026-11-04 ----------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("path", "filter_change", "water_change", "uv"),
+    [
+        (RAW_D8, 172, 150, 148),  # the owner's topside readings: FC 172, H2O 150 (just set), UV 148
+        (RAW_D7, 177, 177, 153),  # five days earlier
+        (RAW_D1, 127, 177, 77),
+    ],
+    ids=["D8", "D7", "D1"],
+)
+def test_maintenance_countdowns(
+    j235: TubDefinition, path: Path, filter_change: int, water_change: int, uv: int
+) -> None:
+    tub = Tub(j235)
+    for f in frames_of(path):
+        tub.on_frame(f)
+    v = tub.state.values
+    assert (v["filter_change_days"], v["water_change_days"], v["uv_days"]) == (filter_change, water_change, uv)
 
 
 def test_d7_census(d7_frames: list[Frame]) -> None:

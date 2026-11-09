@@ -30,9 +30,9 @@ status:
   type: 0xC4
   decode: decrypt
   length: 33
-  # S[i] = 0x19 ^ ((31 - i + adjust[i]) mod 64). The base is pyjacuzzi's decrypt(); the four
+  # S[i] = 0x19 ^ ((31 - i + adjust[i]) mod 64). The base is pyjacuzzi's decrypt(); the five
   # adjustments were calibrated against wall clock and topside readings (protocol.md §3.3).
-  keystream: {xor: 0x19, start: 31, adjust: {"5": -8, "14": -8, "15": -8, "22": -8}}
+  keystream: {xor: 0x19, start: 31, adjust: {"5": -8, "6": -8, "14": -8, "15": -8, "22": -8}}
   # Unkeyed J235 payload from 16 May 2025 (D1). Only used to rebuild frames from legacy
   # fold-only logs (the decoded CSV fixtures).
   fold_template: "000c04050a0e77f30b0f400f321390145a17140c1a1b3b19af1f1c504363202126"
@@ -90,8 +90,14 @@ fields:
     {byte: 5, bit: 5, status: confirmed, description: "Topside temperature-set mode active", evidence: "protocol.md §3.3, §7a; D7"}
   display_state:
     {byte: 26, status: confirmed, description: "0 normal screen, 1 temperature-set screen", evidence: "protocol.md §3.3; D7"}
-  display_aux:
-    {byte: 27, status: hypothesis, description: "Display or alert code: 0x4D in May 2025, 0x99 in Nov 2026 (the old fold 'display state')", evidence: "protocol.md §3.3"}
+  # Maintenance countdowns, in days, as the topside menu shows them (FC, H2O, UV). Each falls
+  # by one a day; the owner resets them from the menu.
+  filter_change_days:
+    {byte: 6, status: confirmed, description: "Topside FC: days until the filter change", evidence: "protocol.md §3.3; D8 172 = topside FC 172; D7 177 five days earlier"}
+  water_change_days:
+    {byte: 24, status: confirmed, description: "Topside H2O: days until the water change", evidence: "protocol.md §3.3; D8 150 = topside H2O just set to 150; D7 177"}
+  uv_days:
+    {byte: 27, status: confirmed, description: "Topside UV: days until the ClearRay UV lamp change. Read before as a display code (0x99 = 153 in D7)", evidence: "protocol.md §3.3; D8 148 = topside UV 148; D7 153 five days earlier"}
   secondary_value_raw:
     {byte: 28, status: hypothesis, description: "Unknown counter (the pump-1 flag is a separate byte now)", evidence: "protocol.md §3.3, §5 d14"}
   light_on:
@@ -233,6 +239,33 @@ entities:
     field: light_mode
     name: Light Mode
     icon: mdi:palette
+  - key: filter_change_days
+    component: sensor
+    field: filter_change_days
+    name: Filter Change Days
+    icon: mdi:air-filter
+    device_class: duration
+    unit_of_measurement: d
+    state_class: measurement
+    entity_category: diagnostic
+  - key: water_change_days
+    component: sensor
+    field: water_change_days
+    name: Water Change Days
+    icon: mdi:water-sync
+    device_class: duration
+    unit_of_measurement: d
+    state_class: measurement
+    entity_category: diagnostic
+  - key: uv_days
+    component: sensor
+    field: uv_days
+    name: UV Lamp Days
+    icon: mdi:lightbulb-fluorescent-tube-outline
+    device_class: duration
+    unit_of_measurement: d
+    state_class: measurement
+    entity_category: diagnostic
   - key: set_mode_active
     component: binary_sensor
     field: set_mode

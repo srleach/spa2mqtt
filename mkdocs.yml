@@ -92,6 +92,7 @@ nav:
       - Docker Compose: install/docker-compose.md
       - Portainer: install/portainer.md
   - Tub guides:
+      - Jacuzzi J235: tubs/jacuzzi-j235.md
       - Jacuzzi J345 (ProLink): tubs/jacuzzi-j345.md
   - ESPHome:
       - Overview: esphome/index.md

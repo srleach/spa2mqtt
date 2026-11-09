@@ -32,7 +32,8 @@ and the same entity names. See [Switch over from MQTT](esphome/migrate.md).
 
 For both options:
 
-- A supported tub. Today that is the Jacuzzi J235 (`jacuzzi_j235`), and, with the MQTT
+- A supported tub. Today that is the Jacuzzi J235 (`jacuzzi_j235`, see the
+  [J235 guide](tubs/jacuzzi-j235.md)), and, with the MQTT
   bridge only, the Jacuzzi J345 (`jacuzzi_j345`). Other tubs need a
   [tub definition](tub-definitions.md).
 - Access to the RS485 header on the spa control board. The header is intended for a

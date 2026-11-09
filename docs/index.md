@@ -44,7 +44,7 @@ temperature setpoint still appear in Home Assistant, but they show as unavailabl
 
 | Model | Board | Definition | Status |
 |---|---|---|---|
-| Jacuzzi J235 (2018) | Encrypted (C4/CC frames) | `jacuzzi_j235` | Sensors confirmed against labelled captures. The transmit path is tested against a simulated board, not yet against the tub. |
+| Jacuzzi J235 (2018) | Encrypted (C4/CC frames) | `jacuzzi_j235` | Sensors confirmed against labelled captures. The transmit path is tested against a simulated board, not yet against the tub. See the [J235 guide](tubs/jacuzzi-j235.md). |
 | Jacuzzi J345 (J-300 series) | Plain (0x16 frames) via the ProLink module | `jacuzzi_j345` | MQTT bridge only. Decoded from the owner's captures; transmit reproduces captured pyjacuzzi frames; not yet run against the tub by this project. See the [J345 guide](tubs/jacuzzi-j345.md). |
 
 To add your tub, see [Monitor and capture](monitor-and-capture.md) and

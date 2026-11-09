@@ -3,7 +3,7 @@
 # CI (.github/workflows/docs.yml) runs "mkdocs build --strict" and publishes to the gh-pages branch.
 
 site_name: spa2mqtt
-site_description: Bridge the RS485 bus of Balboa-family "encrypted" hot tubs to Home Assistant, over MQTT or ESPHome.
+site_description: Bridge the RS485 bus of Balboa-family hot tubs (Jacuzzi, Sundance) to Home Assistant, over MQTT or ESPHome.
 site_url: https://seanrleach.co.uk/spa2mqtt/
 repo_url: https://github.com/srleach/spa2mqtt
 repo_name: srleach/spa2mqtt
@@ -91,6 +91,8 @@ nav:
   - Install:
       - Docker Compose: install/docker-compose.md
       - Portainer: install/portainer.md
+  - Tub guides:
+      - Jacuzzi J345 (ProLink): tubs/jacuzzi-j345.md
   - ESPHome:
       - Overview: esphome/index.md
       - Hardware and wiring: esphome/hardware.md
@@ -103,6 +105,7 @@ nav:
   - Safety: safety.md
   - Reference:
       - Wire protocol: protocol.md
+      - Wire protocol (plain boards): protocol-plain.md
       - Design: design.md
       - Research notes: research-notes.md
       - History: history.md

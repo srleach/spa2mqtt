@@ -136,6 +136,16 @@ answers the open question in their `DECODING.md` §3.8 and includes a standalone
 their own sample frame. That is the first thing this project has given back to the work it is
 built on.
 
+### 9 November 2026: a second tub, on someone else's evidence
+
+| Decision | Rationale |
+|---|---|
+| **Jacuzzi J345 (plain protocol through a ProLink module)**: `definitions/jacuzzi_j345.yaml`, decoded from the contributor's five May 2025 logs (three more recovered from the threads into `tests/fixtures/captures/unencrypted/`) | The tub from the 18 May 2025 "J335" config. Its owner had asked for progress in December 2025. The model name was settled from the owner's own words: J345. |
+| A direct bus mode: fixed address 0x0A, no channel claim, one frame per four status frames | The ProLink stream has no clear-to-send. pyjacuzzi wrote straight to the socket and it worked. |
+| Transmit limited to frames the pyjacuzzi capture shows working, reproduced byte for byte in tests | Nobody on the project can test this tub. |
+| Home Assistant device name and identifier default from the definition | Environment-only installs could not set them, and the second tub would have appeared as "Jacuzzi J235". |
+| Bridge only: ESPHome rejects the protocol | Nobody has wired an ESP32 to a plain board. |
+
 ## Threads worth telling in the write-up
 
 * **Pluggability as a slow-burning requirement.** README concepts (May 2025) → class-name

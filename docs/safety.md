@@ -78,6 +78,31 @@ does not.
 The transmit path is tested against a simulated board. It is not yet confirmed on a real
 J235. Watch the first commands at the topside.
 
+### Direct mode (Jacuzzi J345 through a ProLink module)
+
+The J345 definition uses `bus.mode: direct`. The ProLink's TCP stream carries no polls, so
+there is no channel to claim. When you enable transmit:
+
+1. At start-up and on every reconnect, nothing is sent.
+2. On the **first command** after each connection, the bridge sends one connection-check
+   frame (type 0x19). pyjacuzzi sends the same frame first. Whether the tub needs it is
+   unknown.
+3. Each command is one frame, sent from the ProLink's own bus address (0x0A). Frames are
+   at least four status frames apart, about 1.2 seconds.
+4. A setpoint change is a single set-temperature frame with the target in whole °F. The
+   bridge refuses a target outside 80–104 °F. It does not clamp it. The setpoint is also
+   blocked while the tub reports Celsius mode, and until the first status frame is
+   decoded: in Celsius mode the same byte would mean half degrees Celsius.
+5. Nothing is retried. At most eight commands wait in the queue, and a reconnect drops
+   them.
+
+Every frame this mode can send is a frame that pyjacuzzi sent to the owner's tub in a
+captured session, reproduced byte for byte, with one exception: setpoints other than 90,
+100 and 101 °F use the same frame with another value. A test enumerates every frame the
+definition can emit and fails if any other appears. The project has not run this path
+against the tub. See the [J345 guide](tubs/jacuzzi-j345.md#enable-transmit) for the order
+of first tests.
+
 ## Rules for testing
 
 - **Never leave transmit on while you test an unknown or changed tub definition.** A wrong

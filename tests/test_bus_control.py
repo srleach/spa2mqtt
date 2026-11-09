@@ -189,3 +189,12 @@ def test_slow_channel_grant_does_not_duplicate_presses(j235: TubDefinition) -> N
         run(tub, board, 150)
         assert [c for _, c in board.presses] == [0x01] * 3  # 1 wake + 2 steps, no extras
         assert tub.state.values["setpoint"] == 39.5
+
+
+def test_j235_keeps_the_claiming_bus_client(j235: TubDefinition) -> None:
+    from spa2mqtt.tub import BusClient
+
+    tub = Tub(j235, transmit=True)
+    assert type(tub.bus) is BusClient
+    tub.on_connect()  # a reconnect changes nothing for a claiming client
+    assert tub.bus.state is BusState.LISTEN and not tub.bus.queue

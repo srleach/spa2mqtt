@@ -1,0 +1,367 @@
+# Jacuzzi J345 (J-300 series, unencrypted board), reached through the Jacuzzi ProLink module.
+#
+# Nobody on this project has this tub. Everything here is decoded from five captures its owner
+# shared (GitHub discussions 6 and 13, PR 11) and cross-read against pyjacuzzi. Every field,
+# button and command carries a status and cites its evidence (docs/protocol-plain.md):
+#
+#   S   tests/fixtures/captures/unencrypted/2025-05-21_pyjacuzzi_prolink_session.txt
+#       (pyjacuzzi session: sent commands and the tub's replies)
+#   D   tests/fixtures/captures/unencrypted/2025-05-21_spa2mqtt_debug_0x16.txt
+#   X1  tests/fixtures/captures/unencrypted/2025-05-20T1551Z_spa2mqtt_debug_idle.txt
+#   X2  tests/fixtures/captures/unencrypted/2025-05-20T2207Z_spa2mqtt_debug_lights.txt
+#   X3  tests/fixtures/captures/unencrypted/2025-05-28T0044Z_spa2mqtt_debug_panel.txt
+#   PJ  dhmsjs/pyjacuzzi@f9d6022 src/jacuzzi.py. PJ indexes the whole frame: PJ data[n] is
+#       payload byte n-5 here.
+#
+# "S L8->L9" means: sent on line 8 of S, effect seen on line 9. "L<n>" after a key is a line
+# of that file. tests/test_plain_j345.py replays all five files and checks every line cited.
+#
+# Transmit: each button and command below builds only frames that S shows pyjacuzzi sending
+# to this tub, byte for byte (the one exception, setpoints other than 90, 100 and 101 °F, is
+# marked on set_temperature).
+schema_version: 1
+id: jacuzzi_j345
+aliases: [jacuzzi_j335_unencrypted_farenheit]
+name: Jacuzzi J345
+manufacturer: Jacuzzi
+model: J345
+description: J-300 series, unencrypted board (0x16 status), reached through the Jacuzzi ProLink module on TCP 4257.
+protocol: jacuzzi_plain
+temperature_unit: F
+
+bus:
+  baud: 115200
+  client_mid: 0xBF
+  # The ProLink stream carries no clear-to-send (2,074 received frames in D, X1-X3: all status
+  # or lights). pyjacuzzi wrote straight to the socket from address 0x0A and all 26 sends in S
+  # took effect, so there is no channel claim.
+  mode: direct
+  client_address: 0x0A
+  # Sent once per connection, just before the first command. pyjacuzzi sends it first in the
+  # only session where commands worked. Whether it is needed is unknown: delete this line to
+  # stop sending it.
+  hello: connection_check
+  send_gap_frames: 4
+
+status:
+  type: 0x16
+  decode: plain
+  length: 32
+
+extra_frames:
+  # Four 7-byte light records. Only record 0 is decoded: the topside changes record 0 only.
+  lights: {type: 0x23, length: 28}
+
+commands:
+  type: 0x17
+  encode: plain
+  buttons:
+    pump_1: {code: 0x04, status: confirmed, evidence: "S L22->L23 on, L24->L25 off"}
+    pump_2: {code: 0x05, status: confirmed, evidence: "S L17->L18 on, L20->L21 off"}
+  direct:
+    connection_check:
+      {type: 0x19, payload: [0x01, 0x00], status: inferred, evidence: "S L3->L4, reply type 0x1B in 96 ms; PJ L1760-1762. Whether commands need it is unknown"}
+    # requires: the raw byte is only known to mean whole degrees F. With the topside in Celsius
+    # pyjacuzzi sends half degrees C in the same byte (PJ L394-397), so 80 would ask for 40 C.
+    set_temperature:
+      {type: 0x20, payload: [value], min: 80, max: 104, requires: {celsius_mode: false}, status: confirmed, description: "Whole degrees Fahrenheit, raw byte = value. Refused unless the last status frame shows Fahrenheit", evidence: "S L8->L9 90, L10->L11 100, L13->L14 101. Other values use the same encoding and were never sent"}
+    light_brightness:
+      {type: 0x21, payload: [0x2F, 0x01, 0, 0, 0, 0, value, 0], min: 0, max: 100, status: confirmed, description: "0 turns every light record off. Only 0, 20, 40, 60, 80 and 100 were sent, all but 0 while a colour was on. Per pyjacuzzi (src/jacuzziui.py L487-499) a non-zero value sent while the lights are off starts blend mode; no capture shows that on this tub", evidence: "S L57->L58 0 (off), L63->L64 20, L66->L67 40, L69->L70 60, L72->L73 80, L75->L76 100"}
+    light_white:
+      {type: 0x21, payload: [0x1F, 0x01, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L26->L27, L47->L48"}
+    light_blue:
+      {type: 0x21, payload: [0x1F, 0x02, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L29->L30, L60->L61"}
+    light_green:
+      {type: 0x21, payload: [0x1F, 0x03, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L32->L33"}
+    light_yellow:
+      {type: 0x21, payload: [0x1F, 0x04, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L50->L51"}
+    light_orange:
+      {type: 0x21, payload: [0x1F, 0x05, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L35->L36"}
+    light_red:
+      {type: 0x21, payload: [0x1F, 0x06, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L38->L39"}
+    light_violet:
+      {type: 0x21, payload: [0x1F, 0x07, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L41->L42"}
+    light_amber:
+      {type: 0x21, payload: [0x1F, 0x08, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L54->L55"}
+    light_aqua:
+      {type: 0x21, payload: [0x1F, 0x09, 0, 0, 0, 0, 0xFF, 0], status: confirmed, evidence: "S L44->L45"}
+
+fields:
+  # byte = payload index (0..31). The payload is plaintext: no key, no key stream.
+  hour:
+    {byte: 0, status: confirmed, description: "Tub clock, 24 h. The captures show it about 51 minutes behind wall clock", evidence: "X3 L1403->L1663 rolls 19:59 to 20:00; S L5 19:34 at 20:25 local; PJ L857"}
+  minute:
+    {byte: 1, status: confirmed, evidence: "S L18->L19 and L53, 60 s apart; PJ L858"}
+  day_of_week:
+    {byte: 2, shift: 5, mask: 0x07, status: confirmed, description: "1 = Monday", evidence: "S L5 0x75 = 3 (Wed 21 May 2025); X1 L1 0x54 = 2; X3 L6 0x5b = 2; PJ L862"}
+  day_of_month:
+    {byte: 2, mask: 0x1F, status: confirmed, evidence: "S L5 21; X1 L1 20; X3 L6 27; PJ L863"}
+  month:
+    {byte: 3, status: inferred, evidence: "0x05 in every capture (S L5, X3 L6); PJ L867. One month observed"}
+  year:
+    {byte: 4, offset: 2000, status: inferred, evidence: "0x19 = 2025 (S L5); PJ L868. One year observed"}
+  state_raw:
+    {byte: 5, status: hypothesis, description: "Raw state byte: 8 while the setpoint was far below the water temperature, else 2", evidence: "S L5, L9 0x08; L11 0x02; X1 L1 0x02 with circ pump off; PJ L874-876"}
+  error_code:
+    {byte: 6, status: hypothesis, evidence: "0x00 in every capture (S L5); PJ L888 only"}
+  water_temperature:
+    {byte: 7, invalid: [255], status: inferred, description: "Whole degrees Fahrenheit. Not checked against the topside display", evidence: "S L5 0x64 = 100 °F; stable while the setpoint moved (S L9-L14); PJ L891"}
+  setpoint:
+    {byte: 9, status: confirmed, evidence: "S L8->L9 0x5a, L10->L11 0x64, L13->L14 0x65; panel D L143, X3 L1241"}
+  circulation_pump:
+    {byte: 10, bit: 1, status: inferred, description: "Never commanded", evidence: "S L11 on, flow switch follows at L12; X1 L1 off; PJ L933-944"}
+  pump_1:
+    {byte: 10, bit: 3, status: confirmed, description: "High bit of a two-bit field. A low speed (value 1), if this pump has one, reads as off", evidence: "S L22->L23 on, L24->L25 off; panel D L76, L103; X3 L1118"}
+  pump_2:
+    {byte: 10, bit: 5, status: confirmed, description: "High bit of a two-bit field. A low speed (value 1), if this pump has one, reads as off", evidence: "S L17->L18 on, L20->L21 off; panel D L110, L130; X3 L1153"}
+  heater:
+    {byte: 11, bit: 0, status: hypothesis, description: "Follows the thermostat in three captures. No reference names this bit and nobody watched the heater indicator", evidence: "D L143 on at setpoint = water + 2; X3 L1299 off at setpoint < water; off at S L11, L14. PJ L965 differs"}
+  flow_switch:
+    {byte: 12, bit: 0, status: inferred, evidence: "S L11->L12, 308 ms after circ start; X1 L1 off; PJ L985-992"}
+  celsius_mode:
+    {byte: 13, bit: 0, status: inferred, evidence: "0 in every capture (S L5); PJ L899-902"}
+  reminder:
+    {byte: 13, bit: 7, status: hypothesis, description: "Probably the CLEARRAY replacement reminder", evidence: "Set at X1 L1 and X3 L6; clears at X3 L1542 with the CLEARRAY reset"}
+  set_mode:
+    {byte: 15, bit: 7, status: inferred, description: "Topside is editing a value (setpoint, or a menu value). A remote set-temperature command does not set it", evidence: "D L136 on, L164 off; X3 L1235-L1313; stays 0 after remote 0x20 (S L9, L11, L14)"}
+  secondary_temperature:
+    {byte: 16, status: inferred, description: "Second temperature sensor (plumbing or heater), whole degrees Fahrenheit", evidence: "S L14-L16 0x66/0x65 vs water 0x64; X1 L1, L17; PJ L1049"}
+  clearray_days:
+    {byte: 19, length: 2, status: inferred, description: "CLEARRAY days remaining. The fall from 364 to 0 in six days is unexplained", evidence: "X1 L1 7; X2 L2 365; S L5 364; X3 L6 0, L1542 365; PJ L1056-1059"}
+  display_aux:
+    {byte: 28, status: hypothesis, description: "Display or alert code", evidence: "X1 L1 0xff; X3 L6 0x03 until L1611"}
+  display_state:
+    {byte: 29, status: inferred, description: "0 normal screen, 1 setpoint-edit screen; other values during menu use", evidence: "D L136-L163 0x01 while set_mode; X3 L1477-L1604 menu values"}
+  light_mode:
+    {frame: lights, byte: 0, status: confirmed, description: "Record 0 only. White, yellow and amber are named from the reported RGB; nobody confirmed them by eye", map: {"0": "off", "1": "white", "2": "blue", "3": "green", "4": "yellow", "5": "orange", "6": "red", "7": "violet", "8": "amber", "9": "aqua", "128": "blend", "255": "blend paused"}, evidence: "S L26->L27 and every 0x21 1f MM that follows (S L30-L55); PJ L1546; 0x80 and 0xff from the panel, X3 L1354, L1376"}
+  light_brightness:
+    {frame: lights, byte: 2, status: confirmed, description: "Percent. The topside steps 100, 66, 33", evidence: "S L63->L64, L66->L67, L69->L70, L72->L73, L75->L76; panel X2 L32, L45; PJ L1547"}
+  light_red:
+    {frame: lights, byte: 3, status: confirmed, evidence: "S L27-L55 match the commanded colour; PJ L1548-1550"}
+  light_green:
+    {frame: lights, byte: 4, status: confirmed, evidence: "S L27-L55 match the commanded colour; PJ L1548-1550"}
+  light_blue:
+    {frame: lights, byte: 5, status: confirmed, evidence: "S L27-L55 match the commanded colour; PJ L1548-1550"}
+
+entities:
+  # --- state ---
+  - key: current_temperature
+    component: sensor
+    field: water_temperature
+    name: Current Water Temperature
+    icon: mdi:coolant-temperature
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 0
+  - key: setpoint_temperature
+    component: sensor
+    field: setpoint
+    name: Target Water Temperature
+    icon: mdi:target
+    device_class: temperature
+    unit_of_measurement: "°F"
+    accuracy_decimals: 0
+  - key: secondary_temperature
+    component: sensor
+    field: secondary_temperature
+    name: Secondary Temperature
+    icon: mdi:thermometer-lines
+    device_class: temperature
+    unit_of_measurement: "°F"
+    accuracy_decimals: 0
+    entity_category: diagnostic
+  - key: pump_1_status
+    component: binary_sensor
+    field: pump_1
+    name: Pump 1
+    icon: mdi:water-pump
+    device_class: running
+  - key: pump_2_status
+    component: binary_sensor
+    field: pump_2
+    name: Pump 2
+    icon: mdi:water-pump
+    device_class: running
+  - key: circulation_pump_status
+    component: binary_sensor
+    field: circulation_pump
+    name: Circulation Pump
+    icon: mdi:water-pump
+    device_class: running
+  - key: heater_active
+    component: binary_sensor
+    field: heater
+    name: Heater Active
+    description: Hypothesis. Follows the thermostat in the captures; no reference names the bit.
+    icon: mdi:radiator
+    device_class: heat
+  - key: flow_switch
+    component: binary_sensor
+    field: flow_switch
+    name: Flow Switch
+    icon: mdi:waves-arrow-right
+    entity_category: diagnostic
+  - key: clearray_days_remaining
+    component: sensor
+    field: clearray_days
+    name: CLEARRAY Days Remaining
+    icon: mdi:calendar-clock
+    unit_of_measurement: d
+    entity_category: diagnostic
+  - key: light_mode
+    component: text_sensor
+    field: light_mode
+    name: Light Mode
+    icon: mdi:palette
+  - key: set_mode_active
+    component: binary_sensor
+    field: set_mode
+    name: Set Mode Active
+    icon: mdi:gesture-tap-button
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: reminder_active
+    component: binary_sensor
+    field: reminder
+    name: Reminder Active
+    icon: mdi:bell-alert
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: celsius_mode
+    component: binary_sensor
+    field: celsius_mode
+    name: Celsius Mode
+    icon: mdi:temperature-celsius
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: display_state
+    component: sensor
+    field: display_state
+    name: Display State
+    icon: mdi:monitor
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: state_raw
+    component: sensor
+    field: state_raw
+    name: State Raw
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: error_code
+    component: sensor
+    field: error_code
+    name: Error Code
+    icon: mdi:alert-circle-outline
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: light_red
+    component: sensor
+    field: light_red
+    name: Light Red
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: light_green
+    component: sensor
+    field: light_green
+    name: Light Green
+    entity_category: diagnostic
+    enabled_by_default: false
+  - key: light_blue
+    component: sensor
+    field: light_blue
+    name: Light Blue
+    entity_category: diagnostic
+    enabled_by_default: false
+
+  # --- controls (transmit must be enabled for these to be available) ---
+  - key: temperature_set_control
+    component: number
+    field: setpoint
+    name: Temperature Set Control
+    description: One 0x20 frame per change. 80 and 104 are the lowest and highest setpoints any capture shows. Refused in Celsius mode.
+    control: {type: direct, command: set_temperature}
+    min: 80
+    max: 104
+    step: 1
+    mode: slider
+    device_class: temperature
+    unit_of_measurement: "°F"
+  - key: pump_1_button
+    component: button
+    press: pump_1
+    name: Pump 1 Button
+  - key: pump_2_button
+    component: button
+    press: pump_2
+    name: Pump 2 Button
+  # One button frame, and only when the pump's state differs from the wanted one. No retry.
+  - key: pump_1_switch
+    component: switch
+    field: pump_1
+    press: pump_1
+    name: Pump 1
+    icon: mdi:pump
+  - key: pump_2_switch
+    component: switch
+    field: pump_2
+    press: pump_2
+    name: Pump 2
+    icon: mdi:pump
+  - key: light_brightness
+    component: number
+    field: light_brightness
+    name: Light Brightness
+    description: 0 turns the lights off. Steps of 20 are the values the capture shows accepted. Select a colour first; raising it from off may start blend mode.
+    icon: mdi:brightness-6
+    control: {type: direct, command: light_brightness}
+    min: 0
+    max: 100
+    step: 20
+    mode: slider
+    unit_of_measurement: "%"
+  - key: light_white_button
+    component: button
+    press: light_white
+    name: Light White
+    icon: mdi:lightbulb
+  - key: light_blue_button
+    component: button
+    press: light_blue
+    name: Light Blue
+    icon: mdi:lightbulb
+  - key: light_green_button
+    component: button
+    press: light_green
+    name: Light Green
+    icon: mdi:lightbulb
+  - key: light_yellow_button
+    component: button
+    press: light_yellow
+    name: Light Yellow
+    icon: mdi:lightbulb
+  - key: light_orange_button
+    component: button
+    press: light_orange
+    name: Light Orange
+    icon: mdi:lightbulb
+  - key: light_red_button
+    component: button
+    press: light_red
+    name: Light Red
+    icon: mdi:lightbulb
+  - key: light_violet_button
+    component: button
+    press: light_violet
+    name: Light Violet
+    icon: mdi:lightbulb
+  - key: light_amber_button
+    component: button
+    press: light_amber
+    name: Light Amber
+    icon: mdi:lightbulb
+  - key: light_aqua_button
+    component: button
+    press: light_aqua
+    name: Light Aqua
+    icon: mdi:lightbulb

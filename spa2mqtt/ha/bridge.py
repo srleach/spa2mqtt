@@ -17,10 +17,10 @@ from typing import Any
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
-from ..definitions.model import ButtonEntity, FieldValue, NumberEntity, StateEntity, TubDefinition
+from ..definitions.model import ButtonEntity, FieldValue, NumberEntity, StateEntity, SwitchEntity, TubDefinition
 from ..transport.base import TransmitForbidden
-from ..tub.tub import Tub
-from .discovery import DiscoveryConfig, EntityTopics, build_discovery, format_state
+from ..tub.tub import CommandBlocked, Tub
+from .discovery import HA_COMPONENT, DiscoveryConfig, EntityTopics, build_discovery, format_state
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +108,11 @@ class MqttBridge:
     def publish_discovery(self) -> None:
         for e in self.entities:
             self._publish(e.config_topic, json.dumps(e.payload, sort_keys=True), True)
+            if (renamed := HA_COMPONENT.get(e.entity.component)) is not None:
+                # Earlier releases published this config under the definition's component name,
+                # where Home Assistant ignores it. Clear that retained message.
+                stale = e.config_topic.replace(f"/{renamed}/", f"/{e.entity.component}/", 1)
+                self._publish(stale, "", True)
         self._publish(self.discovery.availability_topic, "online", True)
         self._publish(self.discovery.control_availability_topic, "online" if self.tub.transmit else "offline", True)
         self.republish_all()
@@ -120,7 +125,7 @@ class MqttBridge:
 
     def _on_changes(self, changed: dict[str, FieldValue]) -> None:
         for e in self.entities:
-            if isinstance(e.entity, (StateEntity, NumberEntity)) and e.entity.field in changed:
+            if isinstance(e.entity, (StateEntity, NumberEntity, SwitchEntity)) and e.entity.field in changed:
                 self._publish_entity_state(e)
 
     def heartbeat(self) -> None:
@@ -128,7 +133,7 @@ class MqttBridge:
             self._publish_entity_state(e)
 
     def _publish_entity_state(self, e: EntityTopics, force: bool = False) -> None:
-        if e.state_topic is None or not isinstance(e.entity, (StateEntity, NumberEntity)):
+        if e.state_topic is None or not isinstance(e.entity, (StateEntity, NumberEntity, SwitchEntity)):
             return
         value = self.tub.state.values.get(e.entity.field)
         self.publisher.offer(e.entity.key, e.state_topic, format_state(value), force=force)
@@ -158,7 +163,13 @@ class MqttBridge:
             elif isinstance(e.entity, NumberEntity):
                 target = self.tub.set_number(e.entity.key, float(payload))
                 log.info("%s target set to %s", e.entity.key, target)
+            elif isinstance(e.entity, SwitchEntity):
+                if payload not in ("ON", "OFF"):
+                    raise ValueError("expected ON or OFF")
+                self.tub.set_switch(e.entity.key, payload == "ON")
+        except CommandBlocked as exc:
+            log.warning("ignored %s: %s", e.entity.key, exc)
         except TransmitForbidden as exc:
             log.warning("ignored %s: %s (set spa.transmit: true to enable commands)", e.entity.key, exc)
-        except ValueError:
-            log.warning("ignored %s: bad payload %r", e.entity.key, payload)
+        except ValueError as exc:
+            log.warning("ignored %s: bad payload %r (%s)", e.entity.key, payload, exc)

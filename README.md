@@ -1,7 +1,8 @@
 # spa2mqtt
 
 Bridges the RS485 bus of Balboa-family "encrypted" hot-tub controllers (Jacuzzi J235 and
-relatives, Sundance-style boards) to Home Assistant. Two ways to run it, one shared set of
+relatives, Sundance-style boards) to Home Assistant. The MQTT bridge also supports one
+unencrypted Jacuzzi (J345) through its ProLink module. Two ways to run it, one shared set of
 tub definitions:
 
 * **MQTT bridge** (Python, Docker): talks to an RS485-to-TCP adapter (e.g. EW11A) or a USB
@@ -82,6 +83,7 @@ Every merge to `main` creates a semver release tag `vX.Y.Z` and a multi-arch ima
 | Model | Board | Definition | Status |
 |---|---|---|---|
 | Jacuzzi J235 (2018) | encrypted (C4/CC) | `jacuzzi_j235` | Sensors confirmed against labelled captures; transmit path implemented and tested against a simulated board, not yet against the tub |
+| Jacuzzi J345 (J-300 series) | plain (0x16) via ProLink | `jacuzzi_j345` | Bridge only. Decoded from the owner's captures; transmit reproduces captured pyjacuzzi frames; not yet run against the tub by this project. [Guide](https://seanrleach.co.uk/spa2mqtt/tubs/jacuzzi-j345/) |
 
 To add a tub, see [Tub definitions](https://seanrleach.co.uk/spa2mqtt/tub-definitions/) and
 [Monitor and capture](https://seanrleach.co.uk/spa2mqtt/monitor-and-capture/). Captures are

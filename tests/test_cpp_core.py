@@ -97,3 +97,22 @@ def test_cpp_decode_matches_python(replay_binary: Path, capture: Path, j235: Tub
 def test_esphome_keystream_matches_python(j235: TubDefinition) -> None:
     raw = esphome_definition_module().load("jacuzzi_j235")
     assert bytes(esphome_definition_module().keystream(raw)) == j235.status_stream
+
+
+def test_esphome_rejects_the_plain_definition() -> None:
+    mod = esphome_definition_module()
+    with pytest.raises(mod.DefinitionError, match="not supported by spa_bus"):
+        mod.load("jacuzzi_j345")
+
+
+def test_generator_skips_bridge_only_definitions() -> None:
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "gen_esphome_package.py"), "--check"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stdout
+    assert "skipped jacuzzi_j345.yaml" in proc.stdout
+    assert not (ROOT / "esphome" / "packages" / "jacuzzi_j345.yaml").exists()
+    assert (ROOT / "esphome" / "packages" / "jacuzzi_j235.yaml").is_file()

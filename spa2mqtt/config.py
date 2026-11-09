@@ -39,8 +39,9 @@ class AppConfig:
     mqtt_password: str | None = None
     discovery_prefix: str = "homeassistant"
     base_topic: str = "spa2mqtt"
-    device_name: str = "Jacuzzi J235"
-    device_identifier: str = "185569045"
+    # None: use the tub definition's value (its `ha:` section, else its name and id).
+    device_name: str | None = None
+    device_identifier: str | None = None
     unique_id_prefix: str = ""
     legacy_topics: bool = True
     heartbeat: float = 60.0
@@ -106,8 +107,8 @@ def load_config(path: str | Path | None = "config.yml", env: dict[str, str] | No
         mqtt_password=env.get("MQTT_PASSWORD") or mqtt.get("password"),
         discovery_prefix=str(ha.get("discovery_prefix", "homeassistant")),
         base_topic=str(ha.get("base_topic", "spa2mqtt")),
-        device_name=str(ha.get("device_name", "Jacuzzi J235")),
-        device_identifier=str(ha.get("device_identifier", "185569045")),
+        device_name=str(ha["device_name"]) if ha.get("device_name") else None,
+        device_identifier=str(ha["device_identifier"]) if ha.get("device_identifier") else None,
         unique_id_prefix=str(ha.get("unique_id_prefix", "")),
         legacy_topics=_truthy(ha.get("legacy_topics", True)),
         heartbeat=float(ha.get("heartbeat", legacy_intervals.get("default", 60))),

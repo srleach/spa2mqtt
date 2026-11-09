@@ -1,4 +1,5 @@
-"""Read-only standalone monitor: decode the live bus and print it to the terminal.
+"""Read-only standalone tools: ``monitor`` decodes the live bus and prints it to the terminal;
+``capture`` dumps the frames themselves, leaving out repeats.
 
 No MQTT, no Home Assistant, and no transmission. Three independent guards:
 
@@ -9,6 +10,8 @@ No MQTT, no Home Assistant, and no transmission. Three independent guards:
     spa2mqtt monitor 192.168.1.100                   # EW11A on port 8899
     spa2mqtt monitor 192.168.1.100 --interval 5 --record session.log
     spa2mqtt monitor --replay tests/fixtures/captures/raw/2026-11-04T220754Z_j235_labelled.log
+    spa2mqtt monitor 192.168.1.50 -p 4257 -d jacuzzi_j345 --record -   # ProLink; capture to stdout
+    spa2mqtt capture 192.168.1.100                   # one line per frame that differs from the last
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sys
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -26,8 +30,10 @@ from typing import TextIO
 from .definitions import TubDefinition
 from .definitions.model import FieldValue, StateEntity
 from .protocol import Frame, FrameDecoder, cc_decode, fold
+from .protocol.cipher import unkey
 from .transport.base import TransmitForbidden, Transport
 from .tub import Tub
+from .tub.bus import BOARD_MID
 
 log = logging.getLogger(__name__)
 
@@ -38,10 +44,19 @@ TYPE_NAMES = {
     0x03: "channel ack",
     0x06: "clear to send",
     0x07: "nothing to send",
+    0x16: "status (plain)",
+    0x17: "button (plain)",
+    0x19: "panel request",
+    0x1B: "panel reply",
+    0x20: "set temperature",
+    0x21: "set lights",
+    0x23: "lights (plain)",
     0xC4: "status",
     0xCA: "lights",
     0xCC: "panel/button",
 }
+
+KEYED_LIGHTS = 0xCA  # payload[0] is a per-frame key, as in the status frame (docs/protocol.md §3.5)
 
 
 class ReadOnlyTransport:
@@ -128,7 +143,7 @@ class Monitor:
                 self.last_status = frame
                 if first:
                     self.report(now)  # show the full picture as soon as the tub is heard
-            elif frame.type == self.definition.command_type:
+            elif frame.type == self.definition.command_type and self.definition.command_encode == "cc_xor":
                 self._on_panel_frame(frame, now)
         if now - self._last_report >= self.interval:
             self.report(now)
@@ -147,7 +162,8 @@ class Monitor:
             )
 
     def _on_changes(self, changed: dict[str, FieldValue]) -> None:
-        if not self.show_changes or self.tub.state.status_frames == 1:
+        # <= 1: also quiet for an extra frame (plain lights) that arrives around the first status
+        if not self.show_changes or self.tub.state.status_frames <= 1:
             return
         now = self.clock()
         parts = [f"{self._labels.get(k, k)}={_fmt(v)}" for k, v in changed.items() if k not in self._quiet]
@@ -176,14 +192,18 @@ class Monitor:
         values = self.tub.state.values
         stats = self.decoder.stats
         bus = self.tub.bus
+        plain = self.definition.status_decode == "plain"
         if self.as_json:
+            decoded = None
+            if self.last_status is not None:
+                decoded = (self.last_status.payload if plain else fold(self.last_status.payload)).hex()
             self.out.write(
                 json.dumps(
                     {
                         "t": round(now, 3),
                         "event": "status",
                         "raw": self.last_status.encode().hex() if self.last_status else None,
-                        "decoded": fold(self.last_status.payload).hex() if self.last_status else None,
+                        "decoded": decoded,
                         "values": values,
                         "rates_per_s": rates,
                         "frames": stats.frames,
@@ -209,7 +229,10 @@ class Monitor:
             w("  no status frames yet (is the bridge passing traffic? only one TCP client may be allowed)\n")
         else:
             w(f"  raw     {self.last_status.encode().hex(' ')}\n")
-            w(f"  folded  {fold(self.last_status.payload).hex(' ')}\n")
+            if plain:
+                w(f"  plain   {self.last_status.payload.hex(' ')}\n")
+            else:
+                w(f"  folded  {fold(self.last_status.payload).hex(' ')}\n")
             width = max(len(self._labels.get(k, k)) for k in self.definition.fields)
             for key, fdef in self.definition.fields.items():
                 label = self._labels.get(key, key)
@@ -231,31 +254,100 @@ class Monitor:
     # -- loop --------------------------------------------------------------------
 
     async def run(self, transport: Transport, reconnect: bool = True) -> None:
-        guarded = ReadOnlyTransport(transport)
-        backoff = 1.0
-        while True:
-            try:
-                await guarded.connect()
-                backoff = 1.0
-                while chunk := await guarded.read():
-                    self.feed(chunk)
-                if not reconnect:
-                    return
-                log.warning("bridge closed the connection")
-            except (ConnectionError, OSError) as exc:
-                if not reconnect:
-                    raise
-                log.warning("transport error: %s", exc)
-            finally:
-                await guarded.close()
-            await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, 30.0)
+        await read_loop(transport, self.feed, reconnect)
+
+
+@dataclass
+class FrameLog:
+    """``spa2mqtt capture``: one line per frame, in the capture format (``<epoch> RX <hex>``).
+
+    A bus repeats itself many times a second, so a frame is printed only when it differs from
+    the last frame of the same kind (address and type). The J235 re-keys every status, lights
+    and panel frame, so those are compared after the key is removed: a new key alone is a repeat.
+    The output replays like any other capture; the notes after ``#`` are comments.
+    """
+
+    definition: TubDefinition
+    out: TextIO
+    suppress: bool = True
+    clock: Callable[[], float] = time.time
+    decoder: FrameDecoder = field(default_factory=FrameDecoder)
+    shown: int = 0
+    suppressed: int = 0
+    _last: dict[tuple[int, int, int], bytes] = field(default_factory=dict)
+    _repeats: Counter[tuple[int, int, int]] = field(default_factory=Counter)
+
+    def _content(self, frame: Frame) -> bytes:
+        d = self.definition
+        if frame.type == d.status_type and frame.mid == BOARD_MID:
+            return d.decode_payload(frame.payload)
+        if frame.type == KEYED_LIGHTS and frame.mid == BOARD_MID and d.protocol == "balboa_encrypted":
+            return unkey(frame.payload)
+        if frame.type == d.command_type and d.command_encode == "cc_xor":
+            code = cc_decode(frame.payload)
+            return frame.payload if code is None else bytes([code])
+        return frame.payload
+
+    def feed(self, chunk: bytes) -> None:
+        now = self.clock()
+        for frame in self.decoder.feed(chunk):
+            kind = (frame.addr, frame.mid, frame.type)
+            content = self._content(frame)
+            if self.suppress and self._last.get(kind) == content:
+                self._repeats[kind] += 1
+                self.suppressed += 1
+                continue
+            self._last[kind] = content
+            note = f"0x{frame.addr:02X} {TYPE_NAMES.get(frame.type, f'type 0x{frame.type:02X}')}"
+            if repeats := self._repeats.pop(kind, 0):
+                note += f", after {repeats} repeats"
+            self.out.write(f"{now:.3f} RX {frame.encode().hex()}  # {note}\n")
+            self.shown += 1
+        self.out.flush()
+
+    def summary(self) -> None:
+        stats = self.decoder.stats
+        self.out.write(
+            f"# {stats.frames} frames: {self.shown} shown, {self.suppressed} repeats left out, "
+            f"{stats.crc_errors} crc errors, {stats.resyncs} resyncs\n"
+        )
+        self.out.flush()
+
+    async def run(self, transport: Transport, reconnect: bool = True) -> None:
+        await read_loop(transport, self.feed, reconnect)
+
+
+async def read_loop(transport: Transport, feed: Callable[[bytes], None], reconnect: bool = True) -> None:
+    """Read ``transport`` into ``feed`` until it ends. The transport is wrapped read-only."""
+    guarded = ReadOnlyTransport(transport)
+    backoff = 1.0
+    while True:
+        try:
+            await guarded.connect()
+            backoff = 1.0
+            while chunk := await guarded.read():
+                feed(chunk)
+            if not reconnect:
+                return
+            log.warning("bridge closed the connection")
+        except (ConnectionError, OSError) as exc:
+            if not reconnect:
+                raise
+            log.warning("transport error: %s", exc)
+        finally:
+            await guarded.close()
+        await asyncio.sleep(backoff)
+        backoff = min(backoff * 2, 30.0)
 
 
 def open_record(path: str | None) -> TextIO | None:
+    """``-`` records to stdout, for containers whose only way out is the log view."""
     if not path:
         return None
-    p = Path(path)
-    fh = p.open("a", encoding="ascii")
+    if path == "-":
+        fh: TextIO = sys.stdout
+    else:
+        p = Path(path)
+        fh = p.open("a", encoding="ascii")
     fh.write(f"# spa2mqtt monitor capture, started {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n")
     return fh

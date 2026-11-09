@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
@@ -91,7 +92,7 @@ def test_bridge_publishes_config_availability_and_state(j235: TubDefinition) -> 
     retained = {t: p for t, p, r in client.published if r}
     assert retained["spa2mqtt/jacuzzi_j235/availability"] == "online"
     assert retained["spa2mqtt/jacuzzi_j235/control/availability"] == "offline"
-    assert len([t for t in retained if t.endswith("/config")]) == len(j235.entities)
+    assert len([t for t, p in retained.items() if t.endswith("/config") and p]) == len(j235.entities)
     client.published.clear()
     for f in frames_of(RAW_D1):
         tub.on_frame(f)
@@ -161,3 +162,49 @@ def test_env_overrides() -> None:
         },
     )
     assert (cfg.transport.host, cfg.transport.port, cfg.transmit, cfg.mqtt_host) == ("10.0.0.5", 1234, True, "mq")
+
+
+def test_default_identity_comes_from_the_definition(j235: TubDefinition) -> None:
+    from spa2mqtt.app import discovery_config
+
+    loaded = load_config(None, env={})
+    assert loaded.device_name is None and loaded.device_identifier is None
+    cfg = discovery_config(loaded, j235)
+    # the J235 keeps the device the v1 bridge created: same values as DiscoveryConfig()'s defaults
+    assert (cfg.device_name, cfg.device_identifier) == ("Jacuzzi J235", "185569045")
+    assert (cfg.device_name, cfg.device_identifier) == (
+        DiscoveryConfig().device_name,
+        DiscoveryConfig().device_identifier,
+    )
+    assert [e.config_topic for e in build_discovery(j235, cfg)] == [
+        e.config_topic for e in build_discovery(j235, DiscoveryConfig())
+    ]
+
+
+def test_text_values_are_discovered_as_sensors(j235: TubDefinition) -> None:
+    """Home Assistant has no `text_sensor` MQTT component: a config published there is ignored."""
+    from spa2mqtt.definitions import load_definition
+
+    for definition, key, legacy in (
+        (j235, "pump_1_speed", "homeassistant/sensor/Jacuzzi-J235/Pump-1-Speed/config"),
+        (load_definition("jacuzzi_j345"), "light_mode", "homeassistant/sensor/Jacuzzi-J345/Light-Mode/config"),
+    ):
+        cfg = DiscoveryConfig(device_name=definition.device_name, device_identifier=definition.device_identifier)
+        for legacy_topics in (True, False):
+            entities = build_discovery(definition, dataclasses.replace(cfg, legacy_topics=legacy_topics))
+            topics = {e.entity.key: e.config_topic for e in entities}
+            assert topics[key].startswith("homeassistant/sensor/")
+            assert not any("/text_sensor/" in t for t in topics.values())
+            if legacy_topics:
+                assert topics[key] == legacy
+            assert len(set(topics.values())) == len(topics)  # no two entities share a config topic
+        payload = next(e.payload for e in entities if e.entity.key == key)
+        assert "unit_of_measurement" not in payload and "state_class" not in payload  # a text value
+
+
+def test_bridge_clears_the_config_it_used_to_publish_as_text_sensor(j235: TubDefinition) -> None:
+    _, bridge, client = make_bridge(j235, transmit=False)
+    bridge.publish_discovery()
+    assert ("homeassistant/text_sensor/Jacuzzi-J235/Pump-1-Speed/config", "", True) in client.published
+    cleared = [t for t, p, _ in client.published if p == ""]
+    assert cleared == ["homeassistant/text_sensor/Jacuzzi-J235/Pump-1-Speed/config"]

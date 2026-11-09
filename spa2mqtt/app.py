@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from . import __version__
 from .config import AppConfig
@@ -14,6 +15,9 @@ from .protocol import FrameDecoder
 from .transport import ReplayTransport, TcpTransport, TransmitForbidden, Transport
 from .transport.serial import SerialTransport
 from .tub import BusWriter, Tub
+
+if TYPE_CHECKING:
+    from .ha.discovery import DiscoveryConfig
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +31,21 @@ def make_transport(cfg: AppConfig, definition: TubDefinition) -> Transport:
     if t.type == "replay":
         return ReplayTransport(t.path, speed=t.speed, definition=definition)
     raise ValueError(f"unknown transport type {t.type!r}")
+
+
+def discovery_config(cfg: AppConfig, definition: TubDefinition) -> DiscoveryConfig:
+    """HA identity: config.yml wins; otherwise the tub definition names the device."""
+    from .ha.discovery import DiscoveryConfig
+
+    return DiscoveryConfig(
+        discovery_prefix=cfg.discovery_prefix,
+        base_topic=cfg.base_topic,
+        device_name=cfg.device_name or definition.device_name,
+        device_identifier=cfg.device_identifier or definition.device_identifier,
+        unique_id_prefix=cfg.unique_id_prefix,
+        legacy_topics=cfg.legacy_topics,
+        sw_version=__version__,
+    )
 
 
 async def pump(transport: Transport, tub: Tub, writer: BusWriter, decoder: FrameDecoder | None = None) -> None:
@@ -57,20 +76,11 @@ async def run(cfg: AppConfig, mqtt_enabled: bool = True, on_tub: Callable[[Tub],
     bridge = None
     if mqtt_enabled:
         from .ha.bridge import MqttBridge, MqttSettings
-        from .ha.discovery import DiscoveryConfig
 
         bridge = MqttBridge(
             tub,
             definition,
-            DiscoveryConfig(
-                discovery_prefix=cfg.discovery_prefix,
-                base_topic=cfg.base_topic,
-                device_name=cfg.device_name,
-                device_identifier=cfg.device_identifier,
-                unique_id_prefix=cfg.unique_id_prefix,
-                legacy_topics=cfg.legacy_topics,
-                sw_version=__version__,
-            ),
+            discovery_config(cfg, definition),
             MqttSettings(cfg.mqtt_host, cfg.mqtt_port, cfg.mqtt_username, cfg.mqtt_password),
             heartbeat=cfg.heartbeat,
             heartbeat_overrides=cfg.heartbeat_overrides,
@@ -90,6 +100,7 @@ async def run(cfg: AppConfig, mqtt_enabled: bool = True, on_tub: Callable[[Tub],
             writer = BusWriter(transport, enabled=cfg.transmit)
             try:
                 await transport.connect()
+                tub.on_connect()
                 backoff = 1.0
                 await pump(transport, tub, writer)
                 if cfg.transport.type == "replay":

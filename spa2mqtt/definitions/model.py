@@ -15,7 +15,7 @@ Status = Literal["confirmed", "inferred", "hypothesis"]
 class FieldDef:
     """One value in the decoded status payload. ``decode`` is the canonical transform
     (docs/design.md §4); the C++ implementation in spa_protocol.cpp must match it.
-    ``frame`` names the payload it indexes: "status" or an extra frame (plain boards)."""
+    ``frame`` names the payload it indexes: "status" or an extra frame."""
 
     key: str
     byte: int
@@ -90,9 +90,13 @@ class ButtonEntity(EntityDef):
 
 @dataclass(frozen=True, slots=True)
 class SwitchEntity(EntityDef):
-    """An on/off state (a bit field) reached by pressing a toggle button until it reads right."""
+    """An on/off state (a bit field) reached by pressing a toggle button until it reads right.
+
+    "Off" is reached when ``off_field`` (default: ``field``) reads false. A cycling button may
+    pass through a state that clears ``field`` but is not off (pump 1 low -> high)."""
 
     field: str = ""
+    off_field: str | None = None
     press: str = ""
     confirm_frames: int = 10
     max_presses: int = 3
@@ -142,10 +146,16 @@ class BusConfig:
 
 @dataclass(frozen=True, slots=True)
 class ExtraFrame:
-    """A second periodic board frame whose payload fields may index (plain boards)."""
+    """A second periodic board frame whose payload fields may index. ``decode`` is "plain"
+    (jacuzzi_plain) or "fold" (balboa_encrypted: pairwise fold, protocol.md §3.2)."""
 
     type: int
     length: int
+    decode: Literal["plain", "fold"] = "plain"
+
+    @property
+    def decoded_length(self) -> int:
+        return self.length // 2 if self.decode == "fold" else self.length
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,7 +243,11 @@ class TubDefinition:
         return {k: f.decode(decoded) for k, f in self.fields.items() if f.frame == "status"}
 
     def decode_frame(self, name: str, payload: bytes) -> dict[str, FieldValue]:
-        """Decode the fields that index the extra frame ``name`` (always plaintext)."""
+        """Decode the fields that index the extra frame ``name``."""
+        from ..protocol.cipher import fold
+
+        if self.extra_frames[name].decode == "fold":
+            payload = fold(payload)
         return {k: f.decode(payload) for k, f in self.fields.items() if f.frame == name}
 
     def decode_payload(self, payload: bytes) -> bytes:

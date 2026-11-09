@@ -65,7 +65,8 @@ def load(name_or_path: str) -> dict[str, Any]:
 
 
 def field_keys(defn: dict[str, Any]) -> list[str]:
-    return list(defn["fields"])
+    """The status-frame fields: spa_bus decodes no other frame (extra_frames are bridge only)."""
+    return [k for k, f in defn["fields"].items() if f.get("frame", "status") == "status"]
 
 
 def field_index(defn: dict[str, Any], key: str) -> int:

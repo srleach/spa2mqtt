@@ -147,8 +147,12 @@ class ToggleController:
         self.target = None
         self._pending = False
 
-    def on_status(self, state: bool | None, progress: FieldValue = None) -> None:
-        """Call on every status frame with the switch's field and its progress value."""
+    def on_status(self, state: bool | None, progress: FieldValue = None, off_state: bool | None = None) -> None:
+        """Call on every status frame with the switch's field and its progress value.
+        ``off_state`` is the switch's off field when it has one: "off" is reached when it reads
+        false, not when ``state`` does."""
+        if off_state is not None and self.target is False:
+            state = off_state
         if self.target is None or state is None:
             return
         if state is self.target:

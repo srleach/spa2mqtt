@@ -89,9 +89,10 @@ def test_d7_panel_button_codes(j235: TubDefinition, d7_frames: list[Frame]) -> N
 def test_d7_set_mode_precedes_setpoint_change(j235: TubDefinition, d7_frames: list[Frame]) -> None:
     _, events = run_tub(j235, d7_frames)
     in_set_mode = False
+    first_status = next(e for e in events if "setpoint" in e)  # events also carry lights (CA) changes
     for e in events:
         in_set_mode = e.get("set_mode", in_set_mode)
-        if "setpoint" in e and len(events) and e is not events[0]:
+        if "setpoint" in e and e is not first_status:
             assert in_set_mode, "setpoint changed outside set mode"
 
 

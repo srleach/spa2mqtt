@@ -103,13 +103,17 @@ class Tub:
                     float(sp) if isinstance(sp, (int, float)) and not isinstance(sp, bool) else None,
                     mode if isinstance(mode, bool) else None,
                 )
+            # Switches read the merged state: a field may come from an extra frame (lights).
+            current = self.state.values
             for key, toggle in self.switches.items():
                 sw = self.definition.entity(key)
                 assert isinstance(sw, SwitchEntity)
-                on = values.get(sw.field)
+                on = current.get(sw.field)
+                off = current.get(sw.off_field) if sw.off_field else None
                 toggle.on_status(
                     on if isinstance(on, bool) else None,
-                    values.get(sw.progress_field) if sw.progress_field else None,
+                    current.get(sw.progress_field) if sw.progress_field else None,
+                    off if isinstance(off, bool) else None,
                 )
             if changed:
                 for listener in self._listeners:

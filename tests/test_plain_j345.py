@@ -715,7 +715,7 @@ def test_broken_plain_definitions_are_rejected(mutate: Any, message: str) -> Non
         (lambda r: r["commands"].update(encode="plain"), "commands.encode 'plain' and protocol 'jacuzzi_plain'"),
         (lambda r: r["bus"].update(mode="direct", client_address=0x0A), "go together"),
         (lambda r: r["commands"].update(direct={"x": {"type": 0x20, "payload": [1], "status": "hypothesis"}}), "only"),
-        (lambda r: r.update(extra_frames={"lights": {"type": 0xCA, "length": 8}}), "extra_frames is only allowed"),
+        (lambda r: r.update(extra_frames={"lights": {"type": 0xCA, "length": 8, "decode": "plain"}}), "decode 'plain'"),
         (lambda r: r.update(protocol="jacuzzi_plain"), "go together"),
     ],
 )

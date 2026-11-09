@@ -108,8 +108,12 @@ def _check_family(raw: dict[str, Any], source: str) -> None:
             raise DefinitionError(f"{source}: bus.mode 'direct' is only allowed with protocol 'jacuzzi_plain'")
         if commands and "direct" in commands:
             raise DefinitionError(f"{source}: commands.direct is only allowed with protocol 'jacuzzi_plain'")
-        if "extra_frames" in raw:
-            raise DefinitionError(f"{source}: extra_frames is only allowed with protocol 'jacuzzi_plain'")
+    for name, x in raw.get("extra_frames", {}).items():
+        if (x.get("decode", "plain") == "plain") != plain:
+            raise DefinitionError(
+                f"{source}: extra frame {name!r}: decode 'plain' goes with protocol 'jacuzzi_plain', "
+                "'fold' with the others"
+            )
 
 
 def _direct_commands(
@@ -181,7 +185,10 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
 
     status = raw["status"]
     length = int(status["length"])
-    extra_frames = {k: ExtraFrame(type=x["type"], length=x["length"]) for k, x in raw.get("extra_frames", {}).items()}
+    extra_frames = {
+        k: ExtraFrame(type=x["type"], length=x["length"], decode=x.get("decode", "plain"))
+        for k, x in raw.get("extra_frames", {}).items()
+    }
     if "status" in extra_frames:
         raise DefinitionError(f"{source}: 'status' is reserved and cannot name an extra frame")
     if len({status["type"], *(x.type for x in extra_frames.values())}) != len(extra_frames) + 1:
@@ -209,7 +216,7 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
         )
         if fd.frame != "status" and fd.frame not in extra_frames:
             raise DefinitionError(f"{source}: field {key!r} references unknown frame {fd.frame!r}")
-        frame_length = length if fd.frame == "status" else extra_frames[fd.frame].length
+        frame_length = length if fd.frame == "status" else extra_frames[fd.frame].decoded_length
         if fd.byte + fd.length > frame_length:
             raise DefinitionError(
                 f"{source}: field {key!r} reads bytes {fd.byte}..{fd.byte + fd.length - 1} "
@@ -293,6 +300,11 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
                 need_button(e["press"])
             elif direct[e["press"]].takes_value:
                 raise DefinitionError(f"{source}: switch {key!r} cannot press {e['press']!r}: it needs a value")
+            off_field = e.get("off_field")
+            if off_field is not None:
+                need_field(off_field)
+                if fields[off_field].kind != "bool":
+                    raise DefinitionError(f"{source}: switch {key!r} off_field must be a bit field")
             progress = e.get("progress_field")
             if progress is not None:
                 need_field(progress)
@@ -305,6 +317,7 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
                 SwitchEntity(
                     **common,
                     field=e["field"],
+                    off_field=off_field,
                     press=e["press"],
                     confirm_frames=e.get("confirm_frames", 10),
                     max_presses=max_presses,

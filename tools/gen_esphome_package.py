@@ -21,7 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFINITIONS = ROOT / "definitions"
 PACKAGES = ROOT / "esphome" / "packages"
 ESPHOME_PROTOCOLS = {"balboa_encrypted"}  # what esphome/components/spa_bus implements
-# The platforms spa_bus has. Other entities (switch) are bridge-only and left out of the package.
+# The platforms spa_bus has. Other entities (switch) are bridge-only and left out of the package,
+# as are entities reading an extra frame (spa_bus decodes the status frame only).
 ESPHOME_COMPONENTS = {"sensor", "binary_sensor", "text_sensor", "button", "number"}
 
 HEADER = """\
@@ -57,6 +58,8 @@ def render(path: Path) -> str | None:
     groups: dict[str, list[dict[str, Any]]] = {}
     for e in raw["entities"]:
         if e["component"] not in ESPHOME_COMPONENTS:
+            continue
+        if raw["fields"].get(e.get("field"), {}).get("frame", "status") != "status":
             continue
         groups.setdefault(e["component"], []).append(entry(e))
     body = yaml.safe_dump(groups, sort_keys=False, allow_unicode=True, width=120)

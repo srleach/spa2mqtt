@@ -1,0 +1,1929 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Bridge the RS485 bus of Balboa-family hot tubs (Jacuzzi, Sundance) to Home Assistant, over MQTT or ESPHome.">
+      
+      
+      
+        <link rel="canonical" href="https://seanrleach.co.uk/spa2mqtt/tub-definitions/">
+      
+      
+        <link rel="prev" href="../monitor-and-capture/">
+      
+      
+        <link rel="next" href="../releases/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Tub definitions - spa2mqtt</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tub-definitions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="spa2mqtt" class="md-header__button md-logo" aria-label="spa2mqtt" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            spa2mqtt
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Tub definitions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/srleach/spa2mqtt" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    srleach/spa2mqtt
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="spa2mqtt" class="md-nav__button md-logo" aria-label="spa2mqtt" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    spa2mqtt
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/srleach/spa2mqtt" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    srleach/spa2mqtt
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Install
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/docker-compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/portainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Portainer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tub guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tub guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tubs/jacuzzi-j235/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jacuzzi J235
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tubs/jacuzzi-j345/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jacuzzi J345 (ProLink)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../esphome/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ESPHome
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ESPHome
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../esphome/hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware and wiring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../esphome/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and flash
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../esphome/migrate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Switch over from MQTT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor-and-capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor and capture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tub definitions
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tub definitions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#add-a-tub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add a tub
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decode-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decode modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keystream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keystream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-frames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extra frames
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buttons-and-direct-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Buttons and direct commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Buttons and direct commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#direct-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direct-bus-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct bus mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-a-new-definition-safely" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test a new definition safely
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases and versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wire protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../protocol-plain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wire protocol (plain boards)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#add-a-tub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add a tub
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decode-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decode modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keystream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keystream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-frames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extra frames
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buttons-and-direct-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Buttons and direct commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Buttons and direct commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#direct-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direct-bus-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct bus mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-a-new-definition-safely" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test a new definition safely
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/srleach/spa2mqtt/edit/main/docs/tub-definitions.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="tub-definitions">Tub definitions<a class="headerlink" href="#tub-definitions" title="Permanent link">&para;</a></h1>
+<p>A <em>tub definition</em> is a YAML file that describes one tub model. It says how to decode the
+status frames, which buttons exist, and which entities Home Assistant gets. The Python
+bridge reads it at start-up. The ESPHome component reads it at compile time and turns it
+into C++ tables. Because both read the same file, both give the same entities.</p>
+<p>Built-in definitions live in
+<a href="https://github.com/srleach/spa2mqtt/tree/main/definitions"><code>definitions/</code></a>. List them
+with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>spa2mqtt<span class="w"> </span>definitions
+</code></pre></div>
+<p>A new tub that uses an existing protocol family needs only a new YAML file, with no Python
+or C++. A tub with a different framing or cipher needs a new codec in <code>spa2mqtt/protocol/</code>
+and in <code>esphome/components/spa_bus/spa_protocol.cpp</code>.</p>
+<table>
+<thead>
+<tr>
+<th><code>protocol</code></th>
+<th>Boards</th>
+<th>Runs on</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>balboa_encrypted</code></td>
+<td>Encrypted Jacuzzi and Sundance boards (0xC4 status), for example the J235</td>
+<td>MQTT bridge and ESPHome</td>
+<td><a href="../protocol/">Wire protocol</a></td>
+</tr>
+<tr>
+<td><code>jacuzzi_plain</code></td>
+<td>Unencrypted Jacuzzi boards (0x16 status) behind a ProLink module, for example the J345</td>
+<td>MQTT bridge only</td>
+<td><a href="../protocol-plain/">Wire protocol (plain boards)</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="add-a-tub">Add a tub<a class="headerlink" href="#add-a-tub" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart LR
+    A[Capture with labels] --&gt; B[Write definition YAML]
+    B --&gt; C[spa2mqtt validate]
+    C --&gt; D[Replay the capture&lt;br/&gt;and compare]
+    D --&gt;|values wrong| B
+    D --&gt;|values right| E[Generate ESPHome package]
+    E --&gt; F[Pull request]</code></pre>
+<ol>
+<li><strong>Capture.</strong> Record the bus with <code>tools/capture.py</code> while you press each topside button,
+   and type a label before each press. See <a href="../monitor-and-capture/">Monitor and capture</a>.</li>
+<li><strong>Copy a definition.</strong> Start from
+   <a href="https://github.com/srleach/spa2mqtt/blob/main/definitions/jacuzzi_j235.yaml"><code>definitions/jacuzzi_j235.yaml</code></a>.
+   Give the copy a new <code>id</code> and file name.</li>
+<li><strong>Edit the field map, buttons and entities.</strong> The sections below explain each part.</li>
+<li>
+<p><strong>Validate.</strong> <code>spa2mqtt validate</code> checks every definition against the schema and the
+   loader's own checks. Give a path to check only your file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>spa2mqtt<span class="w"> </span>validate<span class="w"> </span>definitions/my_tub.yaml
+</code></pre></div>
+</li>
+<li>
+<p><strong>Replay and compare.</strong> Decode your capture with your definition, and compare the
+   values with what the topside showed at each label:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>spa2mqtt<span class="w"> </span>monitor<span class="w"> </span>--replay<span class="w"> </span>my-capture.log<span class="w"> </span>-d<span class="w"> </span>definitions/my_tub.yaml<span class="w"> </span>--describe
+</code></pre></div>
+</li>
+<li>
+<p><strong>Add tests.</strong> Put the capture in <code>tests/fixtures/captures/raw/</code> and add the expected
+   values to <code>tests/test_replay.py</code>. The tests then guard your definition from future
+   changes. <code>raw/</code> is for <code>balboa_encrypted</code> tubs: every capture there is also decoded by
+   the C++ core with the J235 definition. Captures of other families go in their own
+   folder, as the J345's do in <code>tests/fixtures/captures/unencrypted/</code>.</p>
+</li>
+<li>
+<p><strong>Generate the ESPHome package.</strong> This writes <code>esphome/packages/&lt;id&gt;.yaml</code> with every
+   entity of the definition:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python3<span class="w"> </span>tools/gen_esphome_package.py
+</code></pre></div>
+<p>CI runs <code>python3 tools/gen_esphome_package.py --check</code> and fails if a package is out of
+date. Never edit a generated package by hand. The tool skips <code>jacuzzi_plain</code>
+definitions, because the ESPHome component does not implement that family.</p>
+</li>
+<li>
+<p><strong>Open a pull request.</strong></p>
+</li>
+</ol>
+<p>You can also use a definition file without adding it to the repository. Set
+<code>spa.definition</code> (or <code>SPA_DEFINITION</code>) to the file path for the bridge, or set
+<code>definition:</code> to the path in the ESPHome <code>spa_bus:</code> block.</p>
+<h2 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h2>
+<p>The schema is
+<a href="https://github.com/srleach/spa2mqtt/blob/main/definitions/tub-definition.schema.json"><code>definitions/tub-definition.schema.json</code></a>
+(JSON Schema draft 2020-12). It documents every key. The loader adds checks that a schema
+cannot express: referenced fields and buttons exist, byte offsets fit in the payload, and
+keys are unique.</p>
+<h3 id="top-level">Top level<a class="headerlink" href="#top-level" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema_version</code></td>
+<td>Always <code>1</code></td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>Lower-case identifier, for example <code>jacuzzi_j235</code>. Used in config and in topics</td>
+</tr>
+<tr>
+<td><code>aliases</code></td>
+<td>Other names that also select this definition</td>
+</tr>
+<tr>
+<td><code>name</code>, <code>manufacturer</code>, <code>model</code>, <code>description</code></td>
+<td>Shown in Home Assistant and in logs</td>
+</tr>
+<tr>
+<td><code>protocol</code></td>
+<td>Codec family in code: <code>balboa_encrypted</code> or <code>jacuzzi_plain</code></td>
+</tr>
+<tr>
+<td><code>temperature_unit</code></td>
+<td><code>C</code> or <code>F</code>. An entity with <code>device_class: temperature</code> must use the same unit</td>
+</tr>
+<tr>
+<td><code>ha</code></td>
+<td>Optional. <code>device_name</code> and <code>device_identifier</code> for Home Assistant, used when <code>config.yml</code> sets neither. Defaults: <code>name</code> and <code>id</code></td>
+</tr>
+<tr>
+<td><code>bus</code></td>
+<td>Bus settings: <code>baud</code>, <code>client_mid</code>, <code>channel_request_magic</code>, <code>dormant_channel_threshold</code>. The last three are used only when transmit is on. See also <a href="#direct-bus-mode">Direct bus mode</a></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>How to decode the status frame. See <a href="#decode-modes">Decode modes</a></td>
+</tr>
+<tr>
+<td><code>extra_frames</code></td>
+<td>Further periodic frames that fields may read. See <a href="#extra-frames">Extra frames</a></td>
+</tr>
+<tr>
+<td><code>commands</code></td>
+<td>Button frame type, encoding (<code>cc_xor</code> or <code>plain</code>), the code of each button, and <a href="#direct-commands">direct commands</a></td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td>The field map. See <a href="#fields">Fields</a></td>
+</tr>
+<tr>
+<td><code>entities</code></td>
+<td>What Home Assistant gets. See <a href="#entities">Entities</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="decode-modes">Decode modes<a class="headerlink" href="#decode-modes" title="Permanent link">&para;</a></h3>
+<p><code>status.decode</code> selects how the bridge turns a raw status frame into plain bytes. The
+encrypted boards hide the status payload with a per-frame key and a fixed key stream. See
+the <a href="../protocol/">wire protocol</a> for the details.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>What it does</th>
+<th>Use it when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>decrypt</code></td>
+<td>Removes the per-frame key and the key stream. Every field then reads as plain bytes</td>
+<td>You know the key stream. This is the current J235 decode</td>
+</tr>
+<tr>
+<td><code>unkey</code></td>
+<td>Removes only the per-frame key</td>
+<td>You are still working out the key stream</td>
+</tr>
+<tr>
+<td><code>fold</code></td>
+<td>The older pairwise reading of the payload</td>
+<td>You have only old fold-based notes or logs</td>
+</tr>
+<tr>
+<td><code>plain</code></td>
+<td>Nothing. The payload is already plain bytes</td>
+<td>The board is unencrypted (<code>protocol: jacuzzi_plain</code>). The loader rejects it for any other family</td>
+</tr>
+</tbody>
+</table>
+<p><code>status.length</code> is the decoded length: 33 for <code>decrypt</code> and <code>unkey</code> on the J235, 16 for
+<code>fold</code>.</p>
+<h3 id="keystream">Keystream<a class="headerlink" href="#keystream" title="Permanent link">&para;</a></h3>
+<p><code>decrypt</code> needs <code>status.keystream</code>. Byte <code>i</code> of the key stream (for <code>i &gt;= 1</code>) is:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>S[i] = xor ^ ((start - i + adjust[i]) mod 64)
+</code></pre></div>
+<p><code>xor</code> and <code>start</code> are numbers. <code>adjust</code> is an optional map from byte index to a small
+correction. The J235 uses <code>{xor: 0x19, start: 31, adjust: {"5": -8, "14": -8, "15": -8, "22": -8}}</code>.
+The corrections were calibrated against the wall clock and the topside readings.</p>
+<h3 id="fields">Fields<a class="headerlink" href="#fields" title="Permanent link">&para;</a></h3>
+<p>Each field reads a value from the decoded payload:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">fields</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">water_temperature</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">byte</span><span class="p">:</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">,</span><span class="nt"> scale</span><span class="p">:</span><span class="w"> </span><span class="nv">0.5</span><span class="p p-Indicator">,</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">,</span><span class="nt"> evidence</span><span class="p">:</span><span class="w"> </span><span class="s">"protocol.md</span><span class="nv"> </span><span class="s">§5</span><span class="nv"> </span><span class="s">d5"</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">heater</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt">byte</span><span class="p">:</span><span class="w"> </span><span class="nv">21</span><span class="p p-Indicator">,</span><span class="nt"> bit</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">pump_1_speed</span><span class="p">:</span><span class="w">      </span><span class="p p-Indicator">{</span><span class="nt">byte</span><span class="p">:</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="nt"> shift</span><span class="p">:</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="nt"> mask</span><span class="p">:</span><span class="w"> </span><span class="nv">0x03</span><span class="p p-Indicator">,</span><span class="nt"> map</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="s">"0"</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">"off"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"1"</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">"low"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"2"</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">"high"</span><span class="p p-Indicator">},</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p>The bridge and the ESPHome component apply the same steps, in this order:</p>
+<ol>
+<li>Read <code>length</code> bytes (default 1) from <code>byte</code> as a big-endian number.</li>
+<li>XOR the number with <code>xor</code> (default 0).</li>
+<li>If <code>bit</code> is set, the value is that bit, as on or off. Stop.</li>
+<li>Shift right by <code>shift</code> (default 0) and apply <code>mask</code> (default all ones).</li>
+<li>If the result is in <code>invalid</code>, the value is unknown.</li>
+<li>If <code>map</code> is set, the value is the mapped text. An unknown number gives an unknown value.</li>
+<li>Otherwise the value is <code>raw * scale + offset</code> (defaults 1 and 0).</li>
+</ol>
+<p>Every field needs a <code>status</code>: <code>confirmed</code>, <code>inferred</code> or <code>hypothesis</code>. Add <code>evidence</code> to
+say where the claim comes from. The monitor shows the status next to each value, and the
+bridge logs entities that rest on a hypothesis.</p>
+<h3 id="extra-frames">Extra frames<a class="headerlink" href="#extra-frames" title="Permanent link">&para;</a></h3>
+<p>A plain board sends its light state in a second periodic frame. <code>extra_frames</code> names such
+a frame, and a field selects it with <code>frame</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">extra_frames</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">lights</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">0x23</span><span class="p p-Indicator">,</span><span class="nt"> length</span><span class="p">:</span><span class="w"> </span><span class="nv">28</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">fields</span><span class="p">:</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">light_brightness</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">frame</span><span class="p">:</span><span class="w"> </span><span class="nv">lights</span><span class="p p-Indicator">,</span><span class="nt"> byte</span><span class="p">:</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">,</span><span class="nt"> evidence</span><span class="p">:</span><span class="w"> </span><span class="s">"S</span><span class="nv"> </span><span class="s">L63-&gt;L64"</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p>A field without <code>frame</code> reads the status frame. The loader checks the byte offset against
+the length of the frame the field names. Values from an extra frame merge into the same
+state as the status values.</p>
+<p>On an encrypted board (<code>balboa_encrypted</code>) an extra frame is keyed, so it needs
+<code>decode: fold</code>. Fields then index the folded payload, <code>d[j] = p[2j] ^ p[2j+1] ^ 1</code>, which is
+<code>length // 2</code> bytes long. The J235 lights frame:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">extra_frames</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">lights</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">0xCA</span><span class="p p-Indicator">,</span><span class="nt"> length</span><span class="p">:</span><span class="w"> </span><span class="nv">29</span><span class="p p-Indicator">,</span><span class="nt"> decode</span><span class="p">:</span><span class="w"> </span><span class="nv">fold</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">fields</span><span class="p">:</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">light_on</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">frame</span><span class="p">:</span><span class="w"> </span><span class="nv">lights</span><span class="p p-Indicator">,</span><span class="nt"> byte</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="nt"> bit</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">,</span><span class="nt"> evidence</span><span class="p">:</span><span class="w"> </span><span class="s">"D7</span><span class="nv"> </span><span class="s">t~294</span><span class="nv"> </span><span class="s">on,</span><span class="nv"> </span><span class="s">307</span><span class="nv"> </span><span class="s">off"</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p><code>decode: plain</code> (the default) is for <code>jacuzzi_plain</code> only. The ESPHome component decodes the
+status frame only: its package leaves out entities that read an extra frame.</p>
+<h3 id="buttons-and-direct-commands">Buttons and direct commands<a class="headerlink" href="#buttons-and-direct-commands" title="Permanent link">&para;</a></h3>
+<p><code>commands.buttons</code> maps a button name to its one-byte code. The short form is the code
+alone. The long form adds a status and evidence, and is the form to use for a tub that
+nobody on the project can test:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">commands</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0x17</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">encode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">plain</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">buttons</span><span class="p">:</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">pump_1</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">code</span><span class="p">:</span><span class="w"> </span><span class="nv">0x04</span><span class="p p-Indicator">,</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">,</span><span class="nt"> evidence</span><span class="p">:</span><span class="w"> </span><span class="s">"S</span><span class="nv"> </span><span class="s">L22-&gt;L23</span><span class="nv"> </span><span class="s">on,</span><span class="nv"> </span><span class="s">L24-&gt;L25</span><span class="nv"> </span><span class="s">off"</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<h4 id="direct-commands">Direct commands<a class="headerlink" href="#direct-commands" title="Permanent link">&para;</a></h4>
+<p><code>commands.direct</code> (<code>jacuzzi_plain</code> only) names commands that have their own frame type.
+The payload is a list of bytes. At most one item may be the word <code>value</code>, and then <code>min</code>
+and <code>max</code> give the allowed range of that byte:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="w">  </span><span class="nt">direct</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nt">set_temperature</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">0x20</span><span class="p p-Indicator">,</span><span class="nt"> payload</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">value</span><span class="p p-Indicator">],</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">80</span><span class="p p-Indicator">,</span><span class="nt"> max</span><span class="p">:</span><span class="w"> </span><span class="nv">104</span><span class="p p-Indicator">,</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">,</span><span class="nt"> evidence</span><span class="p">:</span><span class="w"> </span><span class="s">"S</span><span class="nv"> </span><span class="s">L8-&gt;L9"</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">light_red</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">0x21</span><span class="p p-Indicator">,</span><span class="nt"> payload</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0x1F</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0x06</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0xFF</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">],</span><span class="nt"> status</span><span class="p">:</span><span class="w"> </span><span class="nv">confirmed</span><span class="p p-Indicator">,</span><span class="nt"> evidence</span><span class="p">:</span><span class="w"> </span><span class="s">"S</span><span class="nv"> </span><span class="s">L38-&gt;L39"</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p>A <code>button</code> entity may <code>press</code> a direct command that has no <code>value</code>. A <code>number</code> entity uses
+one that has a <code>value</code> (see <a href="#entities">Entities</a>). The bridge refuses to build a frame
+with a value outside <code>min</code>..<code>max</code>. Every direct command needs a <code>status</code>.</p>
+<p><code>requires</code> is an optional guard. It maps status bit fields to the value each must have in
+the last decoded status frame. If one differs, or no status frame has been decoded yet,
+the bridge refuses the command. The J345 uses <code>requires: {celsius_mode: false}</code> on
+<code>set_temperature</code>, because the byte it sends is only known to mean whole degrees
+Fahrenheit.</p>
+<h3 id="direct-bus-mode">Direct bus mode<a class="headerlink" href="#direct-bus-mode" title="Permanent link">&para;</a></h3>
+<p><code>bus.mode</code> selects how the bridge gets its turn to send.</p>
+<table>
+<thead>
+<tr>
+<th><code>bus.mode</code></th>
+<th>Behaviour</th>
+<th>Use it when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>claim</code> (default)</td>
+<td>Wait for the board's clear-to-send on a claimed channel (<a href="../protocol/">wire protocol §4</a>)</td>
+<td>The bridge is on the RS485 bus itself (EW11A, USB adapter)</td>
+</tr>
+<tr>
+<td><code>direct</code></td>
+<td>Send from the fixed <code>bus.client_address</code>, one frame per <code>bus.send_gap_frames</code> status frames (default 4). No channel claim</td>
+<td>A module such as the ProLink arbitrates the bus (<code>jacuzzi_plain</code> only)</td>
+</tr>
+</tbody>
+</table>
+<p><code>bus.hello</code> names a direct command that the bridge sends once per connection, just before
+the first queued command. Leave it out to send no such frame. The loader requires
+<code>commands.encode: plain</code> and <code>bus.mode: direct</code> together.</p>
+<h3 id="entities">Entities<a class="headerlink" href="#entities" title="Permanent link">&para;</a></h3>
+<p>Each entity maps a field or a button to a Home Assistant entity.</p>
+<table>
+<thead>
+<tr>
+<th><code>component</code></th>
+<th>Needs</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sensor</code></td>
+<td><code>field</code></td>
+<td>Optional <code>device_class</code>, <code>unit_of_measurement</code>, <code>state_class</code>, <code>accuracy_decimals</code></td>
+</tr>
+<tr>
+<td><code>binary_sensor</code></td>
+<td><code>field</code></td>
+<td>Optional <code>device_class</code></td>
+</tr>
+<tr>
+<td><code>text_sensor</code></td>
+<td><code>field</code></td>
+<td>For mapped values such as pump speed. Home Assistant shows it as a sensor with a text value</td>
+</tr>
+<tr>
+<td><code>button</code></td>
+<td><code>press</code></td>
+<td>A button name from <code>commands.buttons</code>, or a direct command with no <code>value</code></td>
+</tr>
+<tr>
+<td><code>switch</code></td>
+<td><code>field</code>, <code>press</code></td>
+<td>An on/off state that a toggle button changes. <code>field</code> is a bit field. Optional <code>off_field</code>, <code>confirm_frames</code>, <code>max_presses</code>, <code>progress_field</code>, <code>device_class</code>. Bridge only</td>
+</tr>
+<tr>
+<td><code>number</code></td>
+<td><code>field</code>, <code>control</code>, <code>min</code>, <code>max</code>, <code>step</code></td>
+<td><code>control: {type: stepper, up:, down:}</code> presses the up and down buttons until the field matches. <code>control: {type: direct, command:}</code> sends one direct command with the value</td>
+</tr>
+</tbody>
+</table>
+<p>A <code>direct</code> number needs a one-byte field with no <code>scale</code>, <code>offset</code>, <code>xor</code>, <code>shift</code> or
+<code>mask</code>, whole-number <code>min</code>, <code>max</code> and <code>step</code>, and a range inside the command's <code>min</code>..<code>max</code>.
+The value sent is then the value shown. A value outside <code>min</code>..<code>max</code> is refused, not
+clamped: one message becomes one frame, with no stepping.</p>
+<p>A <code>switch</code> presses its button only while <code>field</code> differs from the state that Home Assistant
+asked for. After each press it waits <code>confirm_frames</code> status frames (default 10, about
+three seconds on a J235) for the field to follow, then presses again. It stops after
+<code>max_presses</code> (default 3) and logs a warning. The wait matters: a second press sent too
+early turns a two-state pump straight back.</p>
+<p>Some pumps cycle off, low, high, off, so "off" from low takes two presses and the field
+stays on in between. Name the speed field as <code>progress_field</code>. A change there shows that
+the press arrived, and the next press follows without the wait.</p>
+<p>A switch for one speed of such a pump reads that speed's bit, but its "off" should be the
+pump fully off, not the next speed. Name the "running at any speed" bit as <code>off_field</code>:
+"off" is then reached when that field reads false. The J235 <em>Pump 1 Low</em> switch reads
+<code>pump_1_low</code> and has <code>off_field: pump_1_running</code>, so turning it off from low steps through
+high to off.</p>
+<p>With <code>bus.mode: direct</code> a switch sends one frame and never retries, so <code>max_presses</code> must
+be <code>1</code> (the default there).</p>
+<p>The ESPHome component has no switch platform yet. The generated package leaves switches
+out.</p>
+<p>Every entity has a <code>key</code>, a <code>component</code> and a <code>name</code>. Optional: <code>icon</code> (<code>mdi:...</code>),
+<code>entity_category</code> (<code>diagnostic</code> or <code>config</code>), <code>enabled_by_default</code>, <code>description</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Keys and names are identities</p>
+<p>The <code>key</code> becomes the Home Assistant <code>unique_id</code>. With legacy topics on, the <code>name</code> is
+part of the discovery topic. Changing either one for an existing tub creates a new
+entity in Home Assistant and leaves the old one behind.</p>
+</div>
+<h2 id="test-a-new-definition-safely">Test a new definition safely<a class="headerlink" href="#test-a-new-definition-safely" title="Permanent link">&para;</a></h2>
+<p>Keep transmit off while you test a new or changed definition. A wrong field map only shows
+wrong values. A wrong button code or bus setting with transmit on could send a command
+that you did not intend. See <a href="../safety/">Safety</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../monitor-and-capture/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Monitor and capture">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Monitor and capture
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../releases/" class="md-footer__link md-footer__link--next" aria-label="Next: Releases and versions">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Releases and versions
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      spa2mqtt is MIT licensed. Wiring into a spa is at your own risk.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.footer", "navigation.indexes", "search.highlight", "search.suggest", "content.code.copy", "content.action.edit", "content.tabs.link"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

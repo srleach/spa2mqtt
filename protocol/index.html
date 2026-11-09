@@ -1,0 +1,3037 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Bridge the RS485 bus of Balboa-family hot tubs (Jacuzzi, Sundance) to Home Assistant, over MQTT or ESPHome.">
+      
+      
+      
+        <link rel="canonical" href="https://seanrleach.co.uk/spa2mqtt/protocol/">
+      
+      
+        <link rel="prev" href="../safety/">
+      
+      
+        <link rel="next" href="../protocol-plain/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Wire protocol - spa2mqtt</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#jacuzzi-encrypted-rs485-protocol-j235-and-sundance-family-boards" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="spa2mqtt" class="md-header__button md-logo" aria-label="spa2mqtt" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            spa2mqtt
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Wire protocol
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/srleach/spa2mqtt" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    srleach/spa2mqtt
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="spa2mqtt" class="md-nav__button md-logo" aria-label="spa2mqtt" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    spa2mqtt
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/srleach/spa2mqtt" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    srleach/spa2mqtt
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Install
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/docker-compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/portainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Portainer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tub guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tub guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tubs/jacuzzi-j235/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jacuzzi J235
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tubs/jacuzzi-j345/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jacuzzi J345 (ProLink)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../esphome/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ESPHome
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ESPHome
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../esphome/hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware and wiring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../esphome/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and flash
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../esphome/migrate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Switch over from MQTT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor-and-capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor and capture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tub-definitions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tub definitions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases and versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wire protocol
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wire protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Sources
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0. Sources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dumps-j235-this-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dumps (J235, this repo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-and-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code and documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-physical-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Physical layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-framing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Framing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-message-types-and-the-encryption" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Message types and the "encryption"
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Message types and the &#34;encryption&#34;">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-type-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Type table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-encryption-of-c4-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Encryption of C4 (status)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-decryption-plaintext-per-byte-current-decode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Decryption: plaintext per byte (current decode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-encryption-of-cc-button-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Encryption of CC (button command)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-lights-ca" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Lights (CA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-bus-arbitration-and-addressing-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Bus arbitration and addressing (state machine)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-c4-status-field-map-j235" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. C4 status field map (J235)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-commands-transmit-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Commands (transmit path)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Timing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7a-set-mode-where-it-is-visible-and-how-it-was-validated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7a. Set mode: where it is visible, and how it was validated
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Units
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-known-inferred-unknown-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Known / inferred / unknown summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-home-assistant-identities-in-use-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Home Assistant identities in use today
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../protocol-plain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wire protocol (plain boards)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Sources
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0. Sources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dumps-j235-this-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dumps (J235, this repo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-and-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code and documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-physical-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Physical layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-framing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Framing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-message-types-and-the-encryption" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Message types and the "encryption"
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Message types and the &#34;encryption&#34;">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-type-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Type table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-encryption-of-c4-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Encryption of C4 (status)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-decryption-plaintext-per-byte-current-decode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Decryption: plaintext per byte (current decode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-encryption-of-cc-button-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Encryption of CC (button command)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-lights-ca" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Lights (CA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-bus-arbitration-and-addressing-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Bus arbitration and addressing (state machine)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-c4-status-field-map-j235" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. C4 status field map (J235)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-commands-transmit-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Commands (transmit path)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Timing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7a-set-mode-where-it-is-visible-and-how-it-was-validated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7a. Set mode: where it is visible, and how it was validated
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Units
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-known-inferred-unknown-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Known / inferred / unknown summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-home-assistant-identities-in-use-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Home Assistant identities in use today
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/srleach/spa2mqtt/edit/main/docs/protocol.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="jacuzzi-encrypted-rs485-protocol-j235-and-sundance-family-boards">Jacuzzi "encrypted" RS485 protocol (J235 and Sundance-family boards)<a class="headerlink" href="#jacuzzi-encrypted-rs485-protocol-j235-and-sundance-family-boards" title="Permanent link">&para;</a></h1>
+<p>This document describes the RS485 bus protocol spoken by the Jacuzzi J235 control board
+(the "encrypted", Sundance-style variant of the Balboa protocol) as far as it is currently
+understood. It is the reference for <code>spa2mqtt</code> and the <code>spa_bus</code> ESPHome component.</p>
+<p><strong>Ground truth rule.</strong> Where sources disagree, the captured dumps win. Every claim carries a
+citation and a status:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Confirmed</strong></td>
+<td>Verified against J235 dumps with an independent check (wall clock, physical plausibility, CRC, or two independent sources plus a dump).</td>
+</tr>
+<tr>
+<td><strong>Inferred</strong></td>
+<td>Consistent with all J235 dumps and at least one source, but no independent check yet.</td>
+</tr>
+<tr>
+<td><strong>Hypothesis</strong></td>
+<td>Claimed by a source or suggested by data, never observed exercising on a J235.</td>
+</tr>
+<tr>
+<td><strong>Unknown</strong></td>
+<td>No credible interpretation.</td>
+</tr>
+</tbody>
+</table>
+<p>Every dump-derived number below can be reproduced with
+<code>python3 tools/research/analyze_captures.py &lt;section&gt;</code> (cited as <strong>[A:section]</strong>).</p>
+<hr />
+<h2 id="0-sources">0. Sources<a class="headerlink" href="#0-sources" title="Permanent link">&para;</a></h2>
+<h3 id="dumps-j235-this-repo">Dumps (J235, this repo)<a class="headerlink" href="#dumps-j235-this-repo" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>File</th>
+<th>Provenance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>D1</strong></td>
+<td><code>tests/fixtures/captures/raw/2025-05-16_j235_c4_frames.log</code></td>
+<td>54 raw wire frames transcribed from <code>documentation/jacuzzi_encrypted/decoding.md</code> (spa2mqtt <code>b0a5323</code>, lines 37–54 and every third line 65–170; committed <code>645e8b4</code> 2025-05-16 16:49 +0100). Only raw frames in existence.</td>
+</tr>
+<tr>
+<td><strong>D2</strong></td>
+<td><code>tests/fixtures/captures/decoded/2025-05-18_debug_messages_old.csv</code></td>
+<td>8 769 decoded C4 payloads (16 bytes, pairwise-fold decode, §3.2). Rows 1–8752 = <code>debug_messages.csv</code> as of <code>d99bf10</code> (2025-05-18); rows 8753–8769 are a later 2025-05-19 session appended to the same file.</td>
+</tr>
+<tr>
+<td><strong>D3</strong></td>
+<td><code>…/decoded/2025-05-19T125834Z_epoch1747659514.csv</code></td>
+<td>12 rows; recovered from history (deleted in <code>d185ab1</code>). Filename epoch = wall clock.</td>
+</tr>
+<tr>
+<td><strong>D4</strong></td>
+<td><code>…/decoded/2025-05-19T130957Z_epoch1747660197.csv</code></td>
+<td>260 rows; topside <strong>menu navigation/editing</strong> session (deleted in <code>d185ab1</code>).</td>
+</tr>
+<tr>
+<td><strong>D5</strong></td>
+<td><code>…/decoded/2025-05-20T130850Z_epoch1747746530.csv</code></td>
+<td>5 rows (deleted in <code>d185ab1</code>).</td>
+</tr>
+<tr>
+<td><strong>D6</strong></td>
+<td><code>…/decoded/2025-05-20T131044Z_epoch1747746644.csv</code></td>
+<td>32 rows (deleted in <code>d185ab1</code>).</td>
+</tr>
+<tr>
+<td><strong>D8</strong></td>
+<td><code>tests/fixtures/captures/raw/2026-11-09T205918Z_j235_menu_values.log</code></td>
+<td>Raw wire capture, 75 s, 5 368 frames, idle, taken 2026-11-09 20:59 UTC with <code>spa2mqtt capture</code> (read-only). The owner read the topside menu just before: <strong>FC 172, UV 148, H2O 172 changed to 150</strong>, filter cycle 12 am / 4 / 1 hr, heat auto.</td>
+</tr>
+<tr>
+<td><strong>D7</strong></td>
+<td><code>tests/fixtures/captures/raw/2026-11-04T220754Z_j235_labelled.log</code></td>
+<td><strong>Raw wire capture, 9 min, 51 242 frames, all message types</strong>, with 37 owner-typed <code>MARK</code> labels for topside actions (pumps, temp up/down, lights, setpoint to 40). Taken 2026-11-04 22:07 UTC with <code>tools/capture.py</code> (receive-only) through the EW11A. Owner labels are typed shortly <em>after</em> each action.</td>
+</tr>
+</tbody>
+</table>
+<p>The decoded CSVs (D2–D6) contain the 16-byte pairwise-folded payload only: no headers, no
+other message types, no timestamps per row. D7 has everything, so most statuses below rest on
+D7 with D2–D6 as corroboration. <code>[A:labelled]</code> prints the D7 timeline used for each claim.</p>
+<h3 id="code-and-documentation">Code and documentation<a class="headerlink" href="#code-and-documentation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Repository @ commit</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S2M</strong></td>
+<td><code>srleach/spa2mqtt</code> @ <code>b0a5323</code> (legacy, tag/branch <code>legacy/pre-rewrite</code>)</td>
+<td>Legacy implementation and J235 definition. Unmerged branches PR 16–20 (<code>b157d26</code>, <code>ebec593</code>, <code>fbf5cb5</code>, <code>b26e0ea</code>, <code>1f7ebbb</code>) also reviewed.</td>
+</tr>
+<tr>
+<td><strong>SC</strong></td>
+<td><code>srleach/SpaControl</code> @ <code>ec631d8</code></td>
+<td><code>pybalboa/sundanceRS485.py</code>: a modified copy of HyperActiveJ's decoder (older than HJ).</td>
+</tr>
+<tr>
+<td><strong>HJ</strong></td>
+<td><code>HyperActiveJ/sundance780-jacuzzi-balboa-rs485-tcp</code> @ <code>fc38ab5</code></td>
+<td>Sundance 780 decoder plus <code>DECODING.md</code>. GitHub now redirects this repo to <code>pete-jorgensen/SundanceHotTub2MQTT</code> (same HEAD). History was rewritten to a single commit.</td>
+</tr>
+<tr>
+<td><strong>PJ</strong></td>
+<td><code>dhmsjs/pyjacuzzi</code> @ <code>f9d6022</code> (fork <code>srleach/pyjacuzzi</code> @ <code>65f4891</code>)</td>
+<td>Jacuzzi library with Prolink decompilation notes. Upstream has one protocol commit newer than the fork: <code>39c2834</code> (2026-11-03, temperature-scale ordering in the 0x16 parser). Line numbers are for the fork unless marked "up".</td>
+</tr>
+<tr>
+<td><strong>JB</strong></td>
+<td><code>jackbrown1993/Jacuzzi-RS485</code> @ <code>96f3172</code></td>
+<td>Plain (0x16) Jacuzzi decoder derived from HJ/PJ. The plain-board page cites the later head <code>1840e3c</code>.</td>
+</tr>
+<tr>
+<td><strong>IR</strong></td>
+<td><code>Iraithium/sundance-rs485-controller</code> @ <code>f444c9b</code></td>
+<td>ESPHome external component for Sundance (encrypted) boards: prior art for on-device work.</td>
+</tr>
+<tr>
+<td><strong>AL</strong></td>
+<td><code>al1505/ALs-HA-SundanceMarin</code> @ <code>8bb04fb</code></td>
+<td>Sundance Marin 780 HA integration (CRC note only).</td>
+</tr>
+<tr>
+<td><strong>HA</strong></td>
+<td>Home Assistant entity registry, read 2026-11-04</td>
+<td>Current entity set and <code>unique_id</code>s (§10).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-physical-layer">1. Physical layer<a class="headerlink" href="#1-physical-layer" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two-wire RS485, half duplex, shared by the board, topside panel(s) and add-on modules.</td>
+<td>Confirmed</td>
+<td>Legacy README wiring "12v +/, A/B" (S2M <code>README.md</code>); bus has several channels (§4).</td>
+</tr>
+<tr>
+<td><strong>115200 baud, 8N1.</strong></td>
+<td>Inferred</td>
+<td>IR <code>README.md</code> L197 ("115200 8N1, required by the bus", Sundance). The J235 has been read through an EW11A RS485–WiFi bridge (port 8899, S2M <code>config.yml.example</code>); its serial settings are not recorded in this repo. Confirm from the EW11A web UI.</td>
+</tr>
+<tr>
+<td>An EW11A in transparent TCP mode passes bytes unmodified (no escaping).</td>
+<td>Confirmed</td>
+<td>D1 and D7: 51 296 frames, 0 CRC errors, 0 resyncs [A:crc].</td>
+</tr>
+<tr>
+<td>Devices on the J235 bus: the board, one topside panel on channel 0x10, the (passive) EW11A.</td>
+<td>Confirmed</td>
+<td>D7 census: only 0x10 is ever polled and it answers every CTS [A:census].</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-framing">2. Framing<a class="headerlink" href="#2-framing" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a> 0     1     2      3     4      5 .. N-3     N-2   N-1
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a> 7E | LEN | ADDR | MID | TYPE | payload ... | CRC | 7E
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start and end flag 0x7E.</td>
+<td>Confirmed</td>
+<td>D1: all 54 frames [A:crc]; SC L242/L250; PJ <code>src/balboa.py</code> L10.</td>
+</tr>
+<tr>
+<td><code>LEN</code> counts from LEN through CRC: <code>LEN = total_frame_bytes − 2</code>.</td>
+<td>Confirmed</td>
+<td>D1 [A:crc] "LEN==len(frame)-2: True"; PJ <code>docs/ProlinkMessageParsing.txt</code> L4.</td>
+</tr>
+<tr>
+<td>No byte stuffing or escaping. A 0x7E inside the payload is legal; the receiver must frame by LEN, not by scanning for 0x7E.</td>
+<td>Confirmed (no escaping), Inferred (0x7E payload bytes)</td>
+<td>PJ <code>balboa.py</code> L777–821 frames by length; D1 bodies are uniformly random per frame (key byte, §3.1), so payload 0x7E is unavoidable. Legacy S2M resynchronised on <code>7E &lt;non-7E&gt;</code>, which is correct.</td>
+</tr>
+<tr>
+<td>CRC-8 over bytes <code>[1 .. N−3]</code> (LEN through last payload byte).</td>
+<td>Confirmed</td>
+<td>D1 54/54 [A:crc]; SC <code>balboa_calc_cs(data[1:len])</code> L249.</td>
+</tr>
+<tr>
+<td>CRC parameters: <strong>poly 0x07, init 0x02, no reflection, xorout 0x02</strong> (textbook form). The legacy "augmented, register 0xB5" code is the same function.</td>
+<td>Confirmed</td>
+<td>[A:crc] "formulations agree=True"; garbled1 docstring in S2M <code>spas/base/packet/packet.py</code> L631–650. AL's "init 0xFF / xorout 0xFF" variant gives identical results (0x02⊕0xFF is a fixed point), per the upstream review.</td>
+</tr>
+<tr>
+<td>Observed lengths: C4 <code>LEN=0x26</code> (33-byte payload), CA <code>LEN=0x22</code> (29-byte payload), CC <code>LEN=0x07</code> (2-byte payload), CTS 0x06 and new-client 0x00 <code>LEN=0x05</code> (empty payload).</td>
+<td>Confirmed</td>
+<td>D7 census [A:census].</td>
+</tr>
+<tr>
+<td>Consecutive frames each carry their own start and end flag (<code>… 7E 7E …</code>).</td>
+<td>Confirmed</td>
+<td>D7 raw stream.</td>
+</tr>
+<tr>
+<td>Receivers should reject <code>LEN &lt; 5</code> or <code>LEN &gt; 64</code>.</td>
+<td>Inferred (design choice)</td>
+<td>IR accepts 5–64; S2M legacy accepted ≤128; the longest known frame is 0x26.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-message-types-and-the-encryption">3. Message types and the "encryption"<a class="headerlink" href="#3-message-types-and-the-encryption" title="Permanent link">&para;</a></h2>
+<h3 id="31-type-table">3.1 Type table<a class="headerlink" href="#31-type-table" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>TYPE</th>
+<th>ADDR</th>
+<th>MID</th>
+<th>Direction</th>
+<th>Meaning</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0xC4</td>
+<td>0xFF</td>
+<td>0xAF</td>
+<td>board → all</td>
+<td>Status (encrypted)</td>
+<td>Confirmed</td>
+<td>D1 (all frames <code>FF AF C4</code>)</td>
+</tr>
+<tr>
+<td>0xCA</td>
+<td>0xFF</td>
+<td>0xAF</td>
+<td>board → all</td>
+<td>Lights status (encrypted), ≈ 1 Hz</td>
+<td>Confirmed</td>
+<td>D7: 542 frames; layout §3.5.</td>
+</tr>
+<tr>
+<td>0xCC</td>
+<td>client</td>
+<td>0xBF</td>
+<td>client → board</td>
+<td>Button press (encrypted). The panel sends one in reply to <strong>every</strong> CTS; code 0x00 when idle.</td>
+<td>Confirmed</td>
+<td>D7: 24 177 CTS, 24 177 CC on 0x10 [A:census]; codes §3.4.</td>
+</tr>
+<tr>
+<td>0x00</td>
+<td>0xFE</td>
+<td>0xBF</td>
+<td>board → all</td>
+<td>"Any new clients?" (new-client CTS), ≈ 1 Hz</td>
+<td>Confirmed (exists, cadence); purpose Inferred</td>
+<td>D7: 542 frames in 541 s; SC L16, L687–701; IR.</td>
+</tr>
+<tr>
+<td>0x01</td>
+<td>0xFE</td>
+<td>0xBF</td>
+<td>client → board</td>
+<td>Channel assignment request, body <code>02 F1 73</code></td>
+<td>Hypothesis</td>
+<td>SC L688–701 (<code>F1 73</code> "random magic").</td>
+</tr>
+<tr>
+<td>0x02</td>
+<td>0xFE?</td>
+<td>0xBF</td>
+<td>board → client</td>
+<td>Channel assignment response; channel in <code>payload[0]</code></td>
+<td>Hypothesis</td>
+<td>SC L703–705.</td>
+</tr>
+<tr>
+<td>0x03</td>
+<td>channel</td>
+<td>0xBF</td>
+<td>client → board</td>
+<td>Channel assignment ack (empty body)</td>
+<td>Hypothesis</td>
+<td>SC L705–715.</td>
+</tr>
+<tr>
+<td>0x04 / 0x05</td>
+<td>channel</td>
+<td>0xBF</td>
+<td>board ↔ client</td>
+<td>Existing-client request / response (body <code>04 08 00</code>, meaning unknown)</td>
+<td>Hypothesis</td>
+<td>SC L716–730. Note SC/HJ/JB build this frame with an off-by-one (<code>bytearray(9)</code> then write index 9), so this path has probably never run successfully.</td>
+</tr>
+<tr>
+<td>0x06</td>
+<td>channel</td>
+<td>0xBF</td>
+<td>board → client</td>
+<td>Clear to send for that channel, ≈ 45 Hz to 0x10</td>
+<td>Confirmed</td>
+<td>D7: each CTS is followed by the panel's CC [A:census]; SC L731–748.</td>
+</tr>
+<tr>
+<td>0x07</td>
+<td>channel</td>
+<td>0xBF</td>
+<td>client → board</td>
+<td>Nothing to send</td>
+<td>Hypothesis</td>
+<td>SC L23, L642–648 (built, never sent: L743 commented out).</td>
+</tr>
+<tr>
+<td>0x16 / 0x17 / 0x23</td>
+<td></td>
+<td></td>
+<td></td>
+<td><strong>Unencrypted</strong> Jacuzzi status / button / lights. <strong>Not used by the J235.</strong> Documented for the J345 in <a href="../protocol-plain/">Wire protocol (plain boards)</a>.</td>
+<td>Confirmed (not J235)</td>
+<td>No such frames in D1; PJ L1617–1665 and HJ <code>DECODING.md</code> L275–303 treat these as plaintext on non-encrypted boards. The legacy S2M and SC route 0x16/0x23 through the XOR decoder, which is wrong (HJ upstream removed it for that reason).</td>
+</tr>
+</tbody>
+</table>
+<p>The address and MID semantics follow the Balboa convention: <code>MID=0xAF</code> is a board broadcast,
+<code>0xBF</code> is client traffic, <code>ADDR=0xFE</code> is "unassigned client" and <code>0xFF</code> is broadcast
+(Inferred: SC constants; PJ <code>docs/ProlinkMessageTypes.txt</code> L28). The Prolink module uses
+fixed <code>ADDR=0x0A</code> (PJ L198–202). Sundance/J-series panels have been seen on 0x10 and 0x11
+(SC L238 example; HJ <code>DECODING.md</code> L366).</p>
+<h3 id="32-encryption-of-c4-status">3.2 Encryption of C4 (status)<a class="headerlink" href="#32-encryption-of-c4-status" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Superseded for decoding by §3.3.</strong> This section explains the two published models and how
+they relate. spa2mqtt 2.0 decoded with the pairwise fold. The current decode removes the key
+and a calibrated key stream and reads plaintext per byte (§3.3).</p>
+</blockquote>
+<p>Two published models exist. <strong>They are algebraically the same cipher.</strong> This repo proves it
+on D1. The first version of this document chose the pairwise fold because it is key-independent
+and because it gave the right calendar day where pyjacuzzi's per-byte layout did not.</p>
+<p><strong>Per-frame key byte.</strong> <code>payload[0]</code> (frame byte 5) is a random per-frame key K. Every other
+payload byte is <code>K ⊕ c_i</code> for a fixed per-state stream c. In D1, 49 distinct keys appear across
+54 frames, but <code>payload ⊕ K</code> is identical for every frame in the same tub state [A:cipher].
+(Confirmed.)</p>
+<p><strong>Model A: key-stream decrypt</strong> (PJ <code>src/jacuzzi.py</code> L221–292):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>key1 = f[5] ^ 0x19            # 0x59 for CA, 0xDF for CC
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>key2 = LEN - 7
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>for i in 6 .. LEN-1:          # frame indices; CRC untouched
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    key2 = (key2 - 1) mod 64
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    P[i] = f[i] ^ key1 ^ key2
+</code></pre></div>
+<p><strong>Model B: pairwise fold</strong> (HyperActiveJ <code>xormsg</code>, SC L262–267; legacy S2M):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>d[j] = payload[2j] ^ payload[2j+1] ^ 1        for j = 0..15   (payload[32] is never used)
+</code></pre></div>
+<p><strong>Identity</strong> (Confirmed on all 54 D1 frames [A:cipher]; independently derived in the upstream
+review): <code>d[0] = P[6] ^ 0x06</code> and <code>d[j] = P[5+2j] ^ P[6+2j]</code> for j ≥ 1. Consequences:</p>
+<ul>
+<li>HJ's "hour XOR 6" is the key-stream constant. Model A's hour <code>P[6]</code> equals <code>d[0] ^ 6</code>.</li>
+<li>Model B values are XORs of <strong>two adjacent</strong> Model A bytes. HJ's "temperature XOR 2" is really
+  <code>P[15] ^ P[16]</code> with <code>P[16] = 0x02</code> in every sample (D1; PJ samples). PJ's "minute
+  <code>(P[27]&amp;0x3F)^0x08</code> for some unknown reason" is <code>P[27] ^ P[28]</code> with <code>P[28] = 0x08</code>.</li>
+<li><strong>Which model gives the true field boundaries is not settled.</strong> The evidence favours Model B:
+  D1 was committed 2025-05-16 at 16:49 +0100, and its hour/minute read 11:35–11:38. Model B gives
+  day-of-month 16, month 5. Model A gives <code>P[19]&gt;&gt;3 = 19</code>, three days in the future. Model B's
+  day/month also matches wall clock on four further dates (D2–D6, §5). (Day field: Confirmed for
+  Model B; refuted for Model A on J235.)</li>
+<li>Model B discards half the information (16 of 32 bytes). Fields that are not 1:1 with a folded
+  byte may be invisible to it. This is the main reason raw captures are needed (§9).</li>
+</ul>
+<p><strong>Encoding</strong> (for transmit, §6): to send a folded payload d, pick any K and emit
+<code>payload[0]=K, payload[2j+1]=payload[2j]^d[j]^1</code>. Model B decoding is insensitive to the choice
+of the even bytes, but the board decodes with whatever it really uses, so outbound C4 encoding
+is never needed and is not implemented.</p>
+<h3 id="33-decryption-plaintext-per-byte-current-decode">3.3 Decryption: plaintext per byte (current decode)<a class="headerlink" href="#33-decryption-plaintext-per-byte-current-decode" title="Permanent link">&para;</a></h3>
+<p><strong>Method.</strong> Remove the per-frame key, then remove a fixed key stream:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>plain[i] = payload[i] ^ payload[0] ^ S[i]          (i = 1 .. 32; plain[0] = 0)
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>S[i]     = 0x19 ^ ((31 - i + adjust[i]) mod 64)     adjust[i] = -8 at i = 5, 6, 14, 15, 22; else 0
+</code></pre></div>
+<p>Every field is then a plain read of one byte (or some of its bits), with no per-field constant.
+<code>S</code> is pyjacuzzi's key stream (<code>decrypt()</code>, key1 = <code>payload[0] ^ 0x19</code>, key2 counting down from
+31) with five corrections. [A:decrypt] prints the table.</p>
+<p><strong>Why per byte.</strong> After the key is removed, varying data shows up in <em>both</em> bytes of some pairs
+(D7: bytes 2 and 3, bytes 28 and 29). The fold merges each pair into one value, so it loses
+information whenever both bytes change. This is what made the date undecodable from August to
+December (§5 d7) and what made the "secondary temperature" and the display code look multiplexed.</p>
+<p><strong>How the stream was established.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Byte</th>
+<th>Field</th>
+<th>Evidence for S[i] on the bits used</th>
+<th>pyjacuzzi formula</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>hour</td>
+<td>Wall clock D3–D6; pyjacuzzi labelled frame (2:40 PM)</td>
+<td>correct</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pump 1 running (bit 6), heat demand (bit 5), manual circ (bit 7)</td>
+<td>D7 presses</td>
+<td>correct on bits 5–7</td>
+</tr>
+<tr>
+<td>3</td>
+<td>pump 2 (bit 2)</td>
+<td>D7 presses</td>
+<td>correct on bit 2</td>
+</tr>
+<tr>
+<td>5</td>
+<td>day of week (bits 2–0), pump 1 speed (4–3), set mode (5)</td>
+<td>Five dated J235 captures; D7 presses</td>
+<td><strong>8 lower</strong></td>
+</tr>
+<tr>
+<td>6</td>
+<td>filter change days</td>
+<td>D8 topside FC 172 (the formula gives 164); D7 177 five days earlier</td>
+<td><strong>8 lower</strong></td>
+</tr>
+<tr>
+<td>10</td>
+<td>water temperature</td>
+<td>D7 display 38.5 °C; pyjacuzzi label 102 °F</td>
+<td>correct</td>
+</tr>
+<tr>
+<td>14</td>
+<td>day of month (bits 7–3)</td>
+<td>D1 16 May, D7 4 Nov; pyjacuzzi label 18 May</td>
+<td><strong>8 lower</strong></td>
+</tr>
+<tr>
+<td>15</td>
+<td>month (bits 3–0)</td>
+<td>D1 May, D7 November; pyjacuzzi label May</td>
+<td><strong>8 lower</strong></td>
+</tr>
+<tr>
+<td>16</td>
+<td>setpoint</td>
+<td>D7 38.5 → 40.0 → 38.5; pyjacuzzi label 103 °F</td>
+<td>correct</td>
+</tr>
+<tr>
+<td>19</td>
+<td>year − 2000</td>
+<td>2025, 2026 (J235); pyjacuzzi label 2023</td>
+<td>correct</td>
+</tr>
+<tr>
+<td>21</td>
+<td>heater (bit 6)</td>
+<td>D7 heating sequence</td>
+<td>correct on bit 6</td>
+</tr>
+<tr>
+<td>22</td>
+<td>minute</td>
+<td>Wall clock D3–D6; pyjacuzzi label 2:40 PM</td>
+<td><strong>8 lower</strong></td>
+</tr>
+<tr>
+<td>24</td>
+<td>water change days</td>
+<td>D8 topside H2O 150</td>
+<td>correct</td>
+</tr>
+<tr>
+<td>27</td>
+<td>UV lamp days</td>
+<td>D8 topside UV 148</td>
+<td>correct</td>
+</tr>
+</tbody>
+</table>
+<p>Status: <strong>Confirmed</strong> on the bits listed, for the J235. Bytes not listed use the formula without
+correction and are unverified. pyjacuzzi's own "minute <code>(b &amp; 0x3F) ^ 0x08</code> for some unknown
+reason" is the byte-22 correction.</p>
+<p><strong>Cross-check on other tubs.</strong> The same stream, calibrated only on the J235, decodes every raw
+C4 frame published by other projects [A:decrypt], <code>tests/test_replay.py</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Frame</th>
+<th>Plaintext</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HyperActiveJ Sundance 780 docstring sample (<code>fc38ab5</code>)</td>
+<td>14:17 Thu 14/04/2022, water 96 °F, set 90 °F</td>
+<td>Thursday is right for that date; HyperActiveJ's first commits are 15–16 Apr 2022</td>
+</tr>
+<tr>
+<td>pyjacuzzi <code>jacuzzi.py</code> L1124, labelled "05/18/23 2:40PM, WS 103, WT 102"</td>
+<td>14:40 Thu 18/05/2023, water 102, set 103</td>
+<td>Every labelled value matches</td>
+</tr>
+<tr>
+<td>pyjacuzzi <code>jacuzzi.py</code> L246</td>
+<td>13:37 Tue 09/05/2023, water 96, set 97</td>
+<td>Valid date and weekday</td>
+</tr>
+</tbody>
+</table>
+<p>The fold reads the year of the first two as 2023 and 2022, both wrong. Status: the cipher and
+stream are <strong>Confirmed</strong> to be shared by the J235, another encrypted Jacuzzi and the Sundance 780.</p>
+<p><strong>Agreement with the fold.</strong> On all 1 858 raw J235 frames, the plaintext fields equal the old fold
+result wherever the fold was right (<code>test_per_byte_agrees_with_fold_on_every_raw_frame</code>). The
+differences are the corrections: the November day of month, and two pump-start frames in which
+the fold mixed the pump flag into the secondary value.</p>
+<p><strong>Plaintext field map (J235).</strong> The fold field <code>d[j]</code> of §5 is <code>plain[2j] ^ plain[2j+1]</code> (with
+constants), so §5 remains the record of the evidence. The plaintext positions are:</p>
+<table>
+<thead>
+<tr>
+<th>Byte</th>
+<th>Field</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>hour (24 h)</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>2</td>
+<td>bit 7 manual circulation (hypothesis); bit 6 pump 1 running; bit 5 heat demand (hypothesis)</td>
+<td>Confirmed (bit 6)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>bit 2 pump 2</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>5</td>
+<td>bits 2–0 day of week (0 = Sunday); bits 4–3 pump 1 speed; bit 5 set mode</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>6</td>
+<td>filter change days (topside FC): D8 172, D7 177, D1 127</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>10</td>
+<td>water temperature, raw (°C × 2 on this tub)</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>14</td>
+<td>bits 7–3 day of month</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>15</td>
+<td>bits 3–0 month</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>16</td>
+<td>setpoint, raw</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>19</td>
+<td>year − 2000</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>21</td>
+<td>bit 6 heater</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>22</td>
+<td>minute</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>24</td>
+<td>water change days (topside H2O): D8 150, D7 177, D1 177</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>26</td>
+<td>0 normal screen, 1 temperature-set screen</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>27</td>
+<td>UV lamp days (topside UV): D8 148, D7 153, D1 77. Read before as a display code</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>28</td>
+<td>secondary value (meaning unknown)</td>
+<td>Hypothesis</td>
+</tr>
+<tr>
+<td>29</td>
+<td>bit 5 follows pump 1 (the flag that HyperActiveJ saw as "+32 while circulating")</td>
+<td>Inferred</td>
+</tr>
+</tbody>
+</table>
+<h3 id="34-encryption-of-cc-button-command">3.4 Encryption of CC (button command)<a class="headerlink" href="#34-encryption-of-cc-button-command" title="Permanent link">&para;</a></h3>
+<p><code>payload = [K, K ^ 0xE0 ^ code]</code>, i.e. <strong>button code = payload[0] ^ payload[1] ^ 0xE0</strong>.
+(<strong>Confirmed</strong>: in D7 the panel's 24 177 CC frames use a random K every time, and every labelled
+press decodes to the expected code [A:labelled].)</p>
+<ul>
+<li>HJ sends <code>[0xE0|code, 0x00]</code> (SC L245–248: <code>data[5]=val</code>, <code>data[6]=0</code>, with val 225 etc.).</li>
+<li>PJ sends key 0x00 then Model A with key1 0xDF on a 1-byte body, which gives
+  <code>[0x00, code ^ 0xDF ^ 0x3F] = [0x00, code ^ 0xE0]</code> (PJ L294–346).</li>
+<li>SC's idle-panel example <code>7E 07 10 BF CC 65 85 A6 7E</code> decodes to code 0x00 ("no button")
+  (0x65^0x85^0xE0 = 0).</li>
+<li>HJ's observed panel frames decode to P2 (0xE5) and P1 (0xE4) under this rule (HJ
+  <code>DECODING.md</code> L366–369, per the upstream review).</li>
+</ul>
+<p>Plain codes are shared with the unencrypted Jacuzzi 0x17/0x1A commands:</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>HJ value (<code>0xE0|code</code>)</th>
+<th>Function</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x00</td>
+<td>224</td>
+<td>none / idle (sent by the panel on every CTS)</td>
+<td><strong>Confirmed</strong> (D7)</td>
+</tr>
+<tr>
+<td>0x01</td>
+<td>225</td>
+<td>Temp up. The first press only enters set mode; later presses step +0.5 °C</td>
+<td><strong>Confirmed</strong> (D7 t≈210, 238–239, 454)</td>
+</tr>
+<tr>
+<td>0x02</td>
+<td>226</td>
+<td>Temp down (same set-mode behaviour)</td>
+<td><strong>Confirmed</strong> (D7 t≈272–273, 482–484)</td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>228</td>
+<td>Pump 1: off → low → high → off</td>
+<td><strong>Confirmed</strong> (D7 t≈90, 119, 143)</td>
+</tr>
+<tr>
+<td>0x05</td>
+<td>229</td>
+<td>Pump 2: off ↔ on</td>
+<td><strong>Confirmed</strong> (D7 t≈181, 196)</td>
+</tr>
+<tr>
+<td>0x12</td>
+<td>242</td>
+<td>Light: each press steps off → blend → colours → off (§3.5)</td>
+<td><strong>Confirmed</strong> (D7 t≈294–414)</td>
+</tr>
+<tr>
+<td>0x0F</td>
+<td>239</td>
+<td>ClearRay (UV) / circulation</td>
+<td>Hypothesis (HJ, JB). PJ docs say 0x0E (internally inconsistent). Not on the J235 topside.</td>
+</tr>
+<tr>
+<td>0x11</td>
+<td>241</td>
+<td>Light on/off</td>
+<td>Hypothesis. The J235 panel never sent it; its single light button is 0x12.</td>
+</tr>
+<tr>
+<td>0x1E</td>
+<td>254</td>
+<td>Menu</td>
+<td>Hypothesis (defined in HJ, never sent; HJ warns against brute-forcing codes)</td>
+</tr>
+</tbody>
+</table>
+<p>The J235 has no direct "set temperature" command on the encrypted bus. Setpoint changes are made
+by pressing Temp up/down and watching the reported setpoint (§7). (Inferred: SC
+L209, L259, L405–415; PJ L399–458 "no command to set an arbitrary value".)</p>
+<h3 id="35-lights-ca">3.5 Lights (CA)<a class="headerlink" href="#35-lights-ca" title="Permanent link">&para;</a></h3>
+<p>The CA payload (29 bytes) folds to 14 bytes <code>c0..c13</code>. HJ's assignment is confirmed by D7,
+with the owner's colour labels as the independent check [A:labelled]:</p>
+<table>
+<thead>
+<tr>
+<th>c</th>
+<th>Meaning</th>
+<th>Status</th>
+<th>Evidence (D7)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>constant 0xBD</td>
+<td>Unknown</td>
+<td>–</td>
+</tr>
+<tr>
+<td>1</td>
+<td>brightness / on: 0x64 (100) on, 0 off</td>
+<td>Confirmed</td>
+<td>t≈294 on, 307 off</td>
+</tr>
+<tr>
+<td>2</td>
+<td>blue level</td>
+<td>Confirmed</td>
+<td>"blue" → c2=FF; "cyan" → c2=c6=7F; "white" → c2=c6=c8=55</td>
+</tr>
+<tr>
+<td>3, 5</td>
+<td>constants 0x64, 0xFF</td>
+<td>Unknown</td>
+<td>–</td>
+</tr>
+<tr>
+<td>4</td>
+<td>mode: 0x80 blend, 0xFF transition, 0x01 white, 0x02 blue, 0x03 green, 0x06 red, 0x07 violet, 0x08 amber ("green" to the owner), 0x09 aqua</td>
+<td>Confirmed</td>
+<td>press sequence t≈294–414; matches HJ <code>DECODING.md</code> map</td>
+</tr>
+<tr>
+<td>6</td>
+<td>green level</td>
+<td>Confirmed</td>
+<td>"deep green" → c6=FF</td>
+</tr>
+<tr>
+<td>8</td>
+<td>red level</td>
+<td>Confirmed</td>
+<td>"red" → c8=FF; "magenta" → c2=c8=7F</td>
+</tr>
+<tr>
+<td>9</td>
+<td>0x02 while blending, 0x04 at step, 0 static</td>
+<td>Inferred (blend phase/speed)</td>
+<td>–</td>
+</tr>
+<tr>
+<td>7, 10–13</td>
+<td>0</td>
+<td>Unknown</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<p>Blend mode animates c2/c6/c8 about once a second.</p>
+<p><strong>Light button timing</strong> (Confirmed, D7 t≈294–516 [A:labelled]). A 0x12 press steps to the next
+mode only while it follows the previous light press closely: presses 0.6–3.5 s apart stepped
+blend → blend paused → blue → violet → red → amber → green → aqua → white. A press 5.2 s or more
+after the last one turned the light off (t≈306.1, 323.9, 340.6, 357.3, 373.4, 393.6, 408.6), and a
+press while off turned it on in blend. The owner's label at t≈442: "light changes in steps only
+for few secs then toggles off". The J235 definition reads c1 bit 6 as <em>Light</em> (on/off) and c4 as
+<em>Light Mode</em>; the <em>Light</em> switch waits ≈ 7.5 s between presses so that a press which only
+stepped the colour is followed by one that turns the light off.</p>
+<h2 id="4-bus-arbitration-and-addressing-state-machine">4. Bus arbitration and addressing (state machine)<a class="headerlink" href="#4-bus-arbitration-and-addressing-state-machine" title="Permanent link">&para;</a></h2>
+<p>The board polls every client channel with CTS (0x06). A client may transmit <strong>only</strong> in the
+gap immediately after the CTS addressed to its channel. Panels answer every CTS with a CC
+(code 0x00 when idle). (Inferred: SC L731–770; IR.)</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>                 (passive listener: never transmits)
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a> LISTEN ────────────────────────────────────────────────────────────────┐
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>   │ observe CTS(0x06) channels  → known_channels                       │
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>   │ observe CC(0xCC) channels   → active_channels                      │
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>   ▼ a command is queued AND transmit is enabled                        │
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a> CLAIM ── after ≥5 CC frames observed: pick lowest channel in           │
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>   │      known_channels \ active_channels ("dormant") ──► READY        │
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>   │      none dormant: on next 0x00 send 0x01 request (F1 73)          │
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>   ▼                                                                     │
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a> REQUESTED ── 0x02 response: channel = payload[0]; send 0x03 ack ──► READY
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a> READY ── on CTS(our channel): send one queued CC, else nothing         │
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>   │      on CC from another device on our channel → conflict ─────────┘ (back to LISTEN)
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"Dormant channel" reuse: after 5 CC observations, take the lowest polled channel that never sends CC.</td>
+<td>Hypothesis; <strong>not applicable to this J235 install</strong></td>
+<td>SC L46–48, L749–760; IR uses 5 CTS frames. D7: the only polled channel (0x10) answers every CTS, so there is no dormant channel and a new client must use the 0x00/0x01 request.</td>
+</tr>
+<tr>
+<td>Channel request <code>7E 08 FE BF 01 02 F1 73 cs 7E</code> sent in response to 0x00.</td>
+<td>Hypothesis</td>
+<td>SC L687–701.</td>
+</tr>
+<tr>
+<td>After CTS the client should answer immediately; no deadline is documented. HJ over TCP (EW11A) worked, so the window is at least tens of ms.</td>
+<td>Inferred</td>
+<td>SC L742–748; HJ sets TCP_NODELAY (SC L193). IR waits 50 µs for DE/RE turnaround.</td>
+</tr>
+<tr>
+<td>An idle client may stay silent on CTS. HJ never sends NTS (0x07).</td>
+<td>Inferred</td>
+<td>SC L743 commented out.</td>
+</tr>
+<tr>
+<td>The legacy S2M bridge <strong>claims a channel and may send 0x01/0x03 automatically at start-up</strong>, even if no button is pressed.</td>
+<td>Confirmed (code)</td>
+<td>S2M <code>spas/jacuzzi_encrypted/spa/jacuzzi_encrypted_spa.py</code> L51–88, L1182–1188. The rewrite does not do this (design.md §Safety).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-c4-status-field-map-j235">5. C4 status field map (J235)<a class="headerlink" href="#5-c4-status-field-map-j235" title="Permanent link">&para;</a></h2>
+<p>Index = folded byte <code>d[j]</code> (Model B). The equivalent Model A bytes are <code>P[5+2j]</code> and <code>P[6+2j]</code>.
+"Bit n" counts from LSB 0. Scale 0.5 assumes °C, the only mode ever observed on this tub (§8).
+"D7 t≈N" refers to seconds into the labelled capture, printed by [A:labelled].</p>
+<table>
+<thead>
+<tr>
+<th>d</th>
+<th>Field</th>
+<th>Transform</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Hour (24 h)</td>
+<td><code>d0 ^ 0x06</code></td>
+<td><strong>Confirmed</strong></td>
+<td>[A:clock]: D3 13:01 vs wall 12:58Z; D4 13:12 vs 13:09Z; D5 13:11 vs 13:08Z; D6 13:13 vs 13:10Z. D2 runs 17:46→21:31 monotonically. In D7 the tub clock reads 21:31 at 22:07 UTC, so it has drifted since May, but hour and minute roll over consistently.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>bit 7: manual circulation call</td>
+<td><code>(d1&gt;&gt;7)&amp;1</code></td>
+<td>Hypothesis</td>
+<td>SC L341 <code>MANUAL_CIRC = 7</code>. Never set in any J235 dump, D7 included.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>bit 6: <strong>pump 1 running (any speed)</strong></td>
+<td><code>(d1&gt;&gt;6)&amp;1</code></td>
+<td><strong>Confirmed</strong></td>
+<td>D7: set ≈ 0.5 s after the pump-1 press that starts low speed (t≈90.8), stays set through high, clears on off (t≈143.8). Also set when heating starts pump 1 low (t≈454.5). On the J235, pump 1 low is the circulation/heating mode (PJ <code>jacuzzi.py</code> L925–936: "J-235 has no circ pump"). This is what the legacy "Circulation Pump Status" entity has always shown.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>bit 5: heat demand / flow proven?</td>
+<td><code>(d1&gt;&gt;5)&amp;1</code></td>
+<td>Inferred (sequence), meaning Hypothesis</td>
+<td>D7: in the heating sequence, pump 1 low starts at t≈454.5, d1 bit 5 at t≈496.1, heater bit at t≈512.8. D2 rows 1–277 (heating) also show it. Never set when pumps are run manually.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>bit 2: <strong>pump 2 on</strong></td>
+<td><code>(d1&gt;&gt;2)&amp;1</code></td>
+<td><strong>Confirmed</strong></td>
+<td>D7: set by the pump-2 press at t≈181.2, cleared by the next at t≈195.6. Single speed. SC L339/L355.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>bits 2–0: <strong>day of week</strong> (0 = Sunday)</td>
+<td><code>d2 &amp; 7</code></td>
+<td><strong>Confirmed</strong></td>
+<td>[A:clock]: 18 May 2025 (Sun) 0, 19 May (Mon) 1, 20 May (Tue) 2, 16 May (Fri) 5; D7 4 Nov 2026 (Wed) 3. Also right on the three foreign frames (§3.3). An earlier version of this document said the foreign frames disagreed by one day; that came from pairing them with the fold's wrong year.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>bits 4–3: <strong>pump 1 speed</strong> (0 off, 1 low, 2 high)</td>
+<td><code>(d2&gt;&gt;3) &amp; 3</code></td>
+<td><strong>Confirmed</strong></td>
+<td>D7: press 1 → 0x03→0x0B (low), press 2 → 0x13 (high), press 3 → 0x03 (off) at t≈90/119/143. Heating starts low (t≈454.5); D2's heating window has bit 3 set. The legacy "main pump" bit (<code>d2</code> bit 4) is therefore "pump 1 on high".</td>
+</tr>
+<tr>
+<td>2</td>
+<td>bit 5: <strong>set mode active</strong> (topside temperature edit)</td>
+<td><code>(d2&gt;&gt;5)&amp;1</code></td>
+<td><strong>Confirmed</strong></td>
+<td>D7: set by the first temp press and cleared ≈ 5 s after the last (t≈209.9–215.2, 238.2–244.5, 454.5–458.1). D4: set while menu values were edited.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Menu-editable maintenance value</td>
+<td>raw</td>
+<td>Unknown</td>
+<td>D4: changed 130 → 120 → 118 → 90 as the user edited values in the menu. D2 118, D3 111, D5/D6 101, D7 0x4B (75). SC names d3 "water life remaining days". <strong>Resolved by §3.3:</strong> plaintext byte 6 is the filter change countdown (D8).</td>
+</tr>
+<tr>
+<td>4</td>
+<td>constant 0x05</td>
+<td>–</td>
+<td>Unknown</td>
+<td>0x05 in every J235 row, D7 included. HJ's "f4 bit 6 = circulation" never occurs on the J235.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Water temperature</strong></td>
+<td><code>(d5 ^ 0x02) × 0.5</code> °C</td>
+<td><strong>Confirmed</strong></td>
+<td>D7: 0x4F → 38.5 °C matches the owner's "display 38.5C" mark (t≈50); flickers 38.0/38.5. D2: a heating curve 37.5 → 38.5 around a 38.0 setpoint. Without the XOR the D2 reading would jump 2.5 °C in 10 min, so the XOR stays and PR 17/19 are refuted. Caveat: <code>^2</code> is really <code>^P[16]</code> (§3.2), constant in all samples.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>constant 0x20</td>
+<td>–</td>
+<td>Hypothesis: heat mode</td>
+<td>HJ <code>DECODING.md</code>: 32 = AUTO (34 ECO, 36 DAY). 0x20 in every J235 row, D7 included.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Day of month / month</strong>, packed as <code>(day &lt;&lt; 3) XOR month</code></td>
+<td>day = <code>d7 &gt;&gt; 3</code> <strong>only when month ≤ 7</strong>; month low 3 bits = <code>d7 &amp; 7</code>. <strong>Resolved by §3.3:</strong> plaintext byte 14 is the day and byte 15 the month</td>
+<td><strong>Confirmed</strong>; fold ambiguous for months 8–12</td>
+<td>D2–D6 (May) and D1 (16 May) decode exactly. D7 (4 Nov, Wed) has d7 = 0x2B = (4&lt;&lt;3) ^ 11: bit 3 carries both day bit 0 and month bit 3, so the fold cannot separate them (<code>d7&gt;&gt;3</code> gives 5). HJ's January 19 reading fits too. Model A (key-stream) might separate them but its per-byte key stream is wrong at these offsets (§3.2).</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Setpoint</strong></td>
+<td><code>d8 × 0.5</code> °C</td>
+<td><strong>Confirmed</strong></td>
+<td>D7: 0x4D → 38.5 at the "setpoint 38.5c" mark (t≈76); each Temp-up step adds 1 (0.5 °C) up to 0x50 (40.0, t≈469.6); steps back down to 0x4D.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Year − 2000</td>
+<td>raw</td>
+<td><strong>Confirmed</strong></td>
+<td>25 in every 2025 J235 row; 26 (0x1A) in D7 (2026); PJ sample 22, HJ sample 23.</td>
+</tr>
+<tr>
+<td>10</td>
+<td>bit 6: <strong>heater on</strong></td>
+<td><code>(d10&gt;&gt;6)&amp;1</code></td>
+<td><strong>Confirmed</strong></td>
+<td>D7: after raising the setpoint above the water temperature, heater on at t≈512.8 following pump 1 low and d1 bit 5 (§5 d1). D2 rows 1–51: set only while water &lt; setpoint. SC L327; PJ <code>P[26]</code> bit 6.</td>
+</tr>
+<tr>
+<td>10</td>
+<td>bit 7</td>
+<td>–</td>
+<td>Hypothesis: heater run-on / auto circulation</td>
+<td>D2 rows 47–277 (after the heater bit clears, pump 1 still low). Not exercised in D7. PR 17's "pump map" reading of d10 is refuted by D7 (pumps never touch d10).</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Minute</td>
+<td>raw</td>
+<td><strong>Confirmed</strong></td>
+<td>[A:clock] against filename epochs; D7 increments once a minute.</td>
+</tr>
+<tr>
+<td>12</td>
+<td>–</td>
+<td>raw</td>
+<td>Unknown</td>
+<td>175 (18 May), 179 (19 May), 178 (20 May), 0xB1 (177, D7). SC names it "filter life remaining days". <strong>Resolved by §3.3:</strong> plaintext byte 24 is the water change countdown (D8).</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Display / menu state</strong></td>
+<td>raw</td>
+<td>Confirmed (it is display state); individual codes Inferred</td>
+<td>D7: 0x99 (153) idle, 0x98 while in set mode, the same frames as d2 bit 5. D4: 99 → 100/109/114 in the menu → 113/112 editing → back. Idle value differs by day (90, 99, 98, 153), so the code space is not fully understood.</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Secondary value</strong> XOR a pump-1 flag</td>
+<td><code>d14 ^ 0x20</code> while pump 1 runs</td>
+<td>Inferred (flag); value meaning Unknown</td>
+<td>D7: bit 5 flips in the same frame as each pump-1 start/stop (t≈90.3, 143.2, 151.8, 154.7, 454.5) while the underlying value keeps counting: 18 → 28 (pump on, 53 s) → 34 (off, 2 min). Under the §3.2 identity this is a flag bit in P[34] XORed onto a value in P[33] (PJ's samples show P[34] = 0x38 vs 0x18 with pump 1). HJ's "+32 while circulating" is the same effect. The value is not °C water (38.5) and not a clock. Exposed raw, disabled by default. PR 17's "hour" reading is refuted.</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Menu value being edited</td>
+<td>raw</td>
+<td>Inferred</td>
+<td>0 except in D4 rows 109–159 (values 120…160 while d13 = 112/113).</td>
+</tr>
+<tr>
+<td>(P37)</td>
+<td>33rd payload byte</td>
+<td>–</td>
+<td>Unknown</td>
+<td>Never decoded by Model B.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-commands-transmit-path">6. Commands (transmit path)<a class="headerlink" href="#6-commands-transmit-path" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frame: <code>7E 07 &lt;chan&gt; BF CC &lt;K&gt; &lt;K^0xE0^code&gt; &lt;crc&gt; 7E</code>.</td>
+<td>Inferred</td>
+<td>§3.4.</td>
+</tr>
+<tr>
+<td>One frame = one press. Pump buttons cycle off → low → high → off (2-speed pump 1) or off → on → off.</td>
+<td>Inferred</td>
+<td>PJ L663–700 (plain boards); legacy S2M exposes raw "pump button" presses for this reason.</td>
+</tr>
+<tr>
+<td>Send only in the CTS slot for the client's own channel.</td>
+<td>Inferred</td>
+<td>§4.</td>
+</tr>
+<tr>
+<td>There is no acknowledgement. Success is observed only through the next status frames. HJ retries after 2 status frames without change; IR retries after 5, up to 8 attempts.</td>
+<td>Inferred</td>
+<td>SC L50, L405–430 <code>CHECKS_BEFORE_RETRY = 2</code>; IR <code>sundance_spa.h</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-timing">7. Timing<a class="headerlink" href="#7-timing" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C4 status is broadcast ≈ 3.3 times per second (≈ 300 ms).</td>
+<td><strong>Confirmed</strong></td>
+<td>D7: 1 804 C4 in 541 s; D2: 200 rows per full minute.</td>
+</tr>
+<tr>
+<td>CA lights ≈ 1 Hz; new-client 0x00 ≈ 1 Hz; CTS to 0x10 ≈ 45 Hz, each answered by a CC.</td>
+<td>Confirmed</td>
+<td>D7 [A:census].</td>
+</tr>
+<tr>
+<td>A topside press is reflected in the next C4 frame (≤ 300 ms).</td>
+<td>Confirmed</td>
+<td>D7: CC and the C4 change share a capture chunk timestamp, e.g. t≈239.3 [A:labelled].</td>
+</tr>
+<tr>
+<td>Set mode (after the first temp press) times out ≈ 5 s after the last press.</td>
+<td>Confirmed</td>
+<td>D7: 5 of 6 periods end 5.2–5.5 s after the last press [A:setmode].</td>
+</tr>
+<tr>
+<td>One period ended early, 3.6 s after the last press, in the same frame that pump 1 started for heating.</td>
+<td>Hypothesis: heat-call start closes the set screen</td>
+<td>D7 t≈454.5–458.1 [A:setmode]; one occurrence only.</td>
+</tr>
+<tr>
+<td>C4 repeats unchanged between state changes; consumers must de-duplicate.</td>
+<td>Confirmed</td>
+<td>D2 runs of up to 2 313 identical rows [A:timeline].</td>
+</tr>
+<tr>
+<td>No status for &gt; 10 s means the link is down (Prolink rule).</td>
+<td>Inferred</td>
+<td>PJ <code>docs/ProlinkMessageParsing.txt</code> L1439–1453.</td>
+</tr>
+<tr>
+<td>The setpoint loop should allow ≥ 2 status frames (≈ 0.6 s) between presses and give up after a bounded number of attempts.</td>
+<td>Inferred (design)</td>
+<td>HJ/IR retry constants; PJ waits 1 s between presses.</td>
+</tr>
+<tr>
+<td>Topside behaviour: the first Temp up/down press only enters set mode; each further press within ≈ 5 s changes the setpoint by 0.5 °C.</td>
+<td><strong>Confirmed</strong></td>
+<td>D7 t≈210 (enter only), 238–239 (enter + step), 454 (enter + 2 steps). The legacy <code>(target − current)/0.5</code> press count was always one short.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7a-set-mode-where-it-is-visible-and-how-it-was-validated">7a. Set mode: where it is visible, and how it was validated<a class="headerlink" href="#7a-set-mode-where-it-is-visible-and-how-it-was-validated" title="Permanent link">&para;</a></h2>
+<p>Set mode is the topside state entered by the first Temp up/down press, in which further
+presses step the setpoint. It is visible <strong>only in the C4 status broadcast</strong>. Every check below
+comes from D7 [A:setmode].</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two independent indicators</td>
+<td>d2 bit 5 and d13 (0x98 instead of 0x99) agree on <strong>all 1 804</strong> status frames: 119 in set mode, 1 685 not. They come from different byte pairs on the wire.</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>Cause</td>
+<td>All 6 periods start in the same capture chunk as a Temp up/down CC from the topside. No temp press falls outside a period. The setpoint never changes outside a period.</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>First press only enters set mode</td>
+<td>In every period, setpoint steps = presses − 1 (1→0, 2→1, 2→1, 3→2, 2→1, 4→3).</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>5 of 6 periods end 5.2–5.5 s after the last press. The sixth ends after 3.6 s (§7).</td>
+<td>Confirmed (≈ 5 s)</td>
+</tr>
+<tr>
+<td>Other message types</td>
+<td>CA lights frames continue unchanged. The topside's CC frames carry only the presses, then code 0x00. The 0x00 new-client poll continues. No new address or message type appears.</td>
+<td>Confirmed</td>
+</tr>
+<tr>
+<td>Bus cadence</td>
+<td>13.40 CTS polls per status frame both inside and outside set mode. (Per-second rates differ by ~5 %, an artefact of per-chunk capture timestamps.)</td>
+<td>Confirmed</td>
+</tr>
+</tbody>
+</table>
+<p>The broadcast placement suggests that the board drives every panel's display from C4, so a
+second topside would flash the same set screen. That is a hypothesis: no install with two panels
+has been captured.</p>
+<p><strong>Consequence for control.</strong> <code>SetpointController</code> reads the set-mode field named by the
+definition (<code>control.set_mode_field</code>). A press that turns set mode on is the "wake" press, and
+the next press follows on the next status frame. Without the field, the controller falls back to
+waiting <code>confirm_frames</code> and retrying. Both paths also wait while the press is still queued for a
+bus slot. Without that wait, a slow channel grant made the fallback queue duplicate presses and
+overshoot (regression test <code>test_slow_channel_grant_does_not_duplicate_presses</code>).</p>
+<h2 id="8-units">8. Units<a class="headerlink" href="#8-units" title="Permanent link">&para;</a></h2>
+<p>The J235 in D1–D6 reports in °C ×2. Every value is consistent with that: setpoint 76 → 38.0 °C,
+water 37.5–38.5 °C. (Confirmed for this tub.) No known field on encrypted boards gives the
+unit flag: PJ upstream <code>39c2834</code> explicitly leaves it undetermined for C4. Unit is therefore a
+<strong>configuration value</strong> in the tub definition, not a decoded field.</p>
+<h2 id="9-known-inferred-unknown-summary">9. Known / inferred / unknown summary<a class="headerlink" href="#9-known-inferred-unknown-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Known (Confirmed)</th>
+<th>Inferred</th>
+<th>Unknown / Hypothesis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framing</td>
+<td>0x7E flags, LEN semantics, CRC-8 (0x07/0x02/0x02), no escaping, own flags per frame</td>
+<td>Valid LEN range 5–64</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Cipher</td>
+<td>Per-frame key byte; fold ⇔ key-stream identity; key stream with four corrections (§3.3), shared with the Sundance 780 and another encrypted Jacuzzi; CC <code>[K, K^0xE0^code]</code></td>
+<td>–</td>
+<td>Key stream at bytes not yet tied to a known field</td>
+</tr>
+<tr>
+<td>Status C4</td>
+<td>Hour, minute, day of week, day, month, year, water temp, setpoint, heater, pump 1 running + speed, pump 2, set mode, set screen, cadence, filter / water / UV countdowns (bytes 6, 24, 27)</td>
+<td>heat-demand sequence; pump-1 flag in byte 29</td>
+<td>Manual circ; d10.7; d4, d6; heat mode and filter cycle settings; secondary value byte 28</td>
+</tr>
+<tr>
+<td>Lights CA</td>
+<td>brightness, mode codes, R/G/B positions, ≈ 1 Hz</td>
+<td>c9 blend phase</td>
+<td>c0, c3, c5, c7, c10–13</td>
+</tr>
+<tr>
+<td>Commands</td>
+<td>0x00 idle, 0x01/0x02 temp, 0x04 pump 1, 0x05 pump 2, 0x12 light; press semantics; set-mode first press</td>
+<td>–</td>
+<td>ClearRay 0x0F, 0x11, menu 0x1E on J235</td>
+</tr>
+<tr>
+<td>Bus</td>
+<td>Channel 0x10 = topside; CTS ≈ 45 Hz, CC on every CTS; 0x00 ≈ 1 Hz; C4 ≈ 3.3 Hz; the board grants a client channel (0x11 to the bridge, D8)</td>
+<td>CTS-slot rule</td>
+<td>The bytes of the request/ack exchange on J235 (not captured); CTS deadline; 0x04/0x05 semantics</td>
+</tr>
+<tr>
+<td>Physical</td>
+<td>EW11A transparent bridging</td>
+<td>115200 8N1</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Still open after D8:</strong> the filter cycle settings and heat mode (need a capture while they
+are changed at the topside), manual circulation and the bytes of the J235 channel-request
+exchange. The bridge's claim works (D8: the board polls 0x11, the bridge's channel, as often
+as the topside's 0x10), but no capture holds the request and the answer. The
+FC, H2O and UV countdowns are resolved (bytes 6, 24, 27). In the fold (§5) they sit in d3, d12
+and d13: SC's names for d3 and d12 ("water life", "filter life") are swapped, and the "display
+state" in d13 is mostly the UV countdown.
+A capture taken while the bridge claims a channel would record the exchange.
+<code>tools/capture.py</code> produces the capture format; drop files into <code>tests/fixtures/captures/raw/</code>
+and the replay tests pick them up.</p>
+<h2 id="10-home-assistant-identities-in-use-today">10. Home Assistant identities in use today<a class="headerlink" href="#10-home-assistant-identities-in-use-today" title="Permanent link">&para;</a></h2>
+<p>Read from the HA entity registry on 2026-11-04 (all <code>platform: mqtt</code>, one device
+<code>Jacuzzi J235</code>, identifiers <code>185569045</code>):</p>
+<table>
+<thead>
+<tr>
+<th>entity_id</th>
+<th>unique_id</th>
+<th>Decoded from (this document)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sensor.jacuzzi_j235_current_water_temperature</code></td>
+<td><code>current_temperature</code></td>
+<td>d5</td>
+</tr>
+<tr>
+<td><code>sensor.jacuzzi_j235_target_water_temperature</code></td>
+<td><code>setpoint_temperature</code></td>
+<td>d8</td>
+</tr>
+<tr>
+<td><code>binary_sensor.jacuzzi_j235_circulation_pump_status</code></td>
+<td><code>circulation_pump_status</code></td>
+<td>d1 bit 6 = pump 1 running, any speed (Confirmed)</td>
+</tr>
+<tr>
+<td><code>binary_sensor.jacuzzi_j235_main_pump_status</code></td>
+<td><code>main_pump_status</code></td>
+<td>d2 bit 4 = pump 1 on <strong>high</strong> (Confirmed)</td>
+</tr>
+<tr>
+<td><code>binary_sensor.jacuzzi_j235_secondary_pump_status</code></td>
+<td><code>secondary_pump_status</code></td>
+<td>d1 bit 2 = pump 2 (Confirmed)</td>
+</tr>
+<tr>
+<td><code>binary_sensor.jacuzzi_j235_manual_circulation_call</code></td>
+<td><code>manual_circulation_call</code></td>
+<td>d1 bit 7 (Hypothesis)</td>
+</tr>
+<tr>
+<td><code>binary_sensor.jacuzzi_j235_heater_active</code></td>
+<td><code>heater_active</code></td>
+<td>d10 bit 6 (Confirmed)</td>
+</tr>
+<tr>
+<td><code>button.jacuzzi_j235_temperature_increment</code></td>
+<td><code>temperature_increment</code></td>
+<td>CC code 0x01</td>
+</tr>
+<tr>
+<td><code>button.jacuzzi_j235_temperature_decrement</code></td>
+<td><code>temperature_decrement</code></td>
+<td>CC code 0x02</td>
+</tr>
+<tr>
+<td><code>button.jacuzzi_j235_pump_1_button</code></td>
+<td><code>pump_1_button</code></td>
+<td>CC code 0x04</td>
+</tr>
+<tr>
+<td><code>button.jacuzzi_j235_pump_2_button</code></td>
+<td><code>pump_2_button</code></td>
+<td>CC code 0x05</td>
+</tr>
+<tr>
+<td><code>number.jacuzzi_j235_temperature_set_control</code></td>
+<td><code>temperature_set_control</code></td>
+<td>setpoint loop over 0x01/0x02</td>
+</tr>
+</tbody>
+</table>
+<p><code>manual_circulation_call</code> and <code>heater_active</code> exist in HA but in no git ref of this repo. They
+came from an unpublished local definition. Their bit positions above are taken from the
+legacy <code>dev/debug_parser.py</code> field map (<code>Man Circ</code> d1 bit 7, <code>Heater?</code> d10 bit 6) and from the
+evidence in §5.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../safety/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Safety">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Safety
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../protocol-plain/" class="md-footer__link md-footer__link--next" aria-label="Next: Wire protocol (plain boards)">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Wire protocol (plain boards)
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      spa2mqtt is MIT licensed. Wiring into a spa is at your own risk.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.footer", "navigation.indexes", "search.highlight", "search.suggest", "content.code.copy", "content.action.edit", "content.tabs.link"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

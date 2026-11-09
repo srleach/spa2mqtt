@@ -422,15 +422,17 @@ unit flag: PJ upstream `39c2834` explicitly leaves it undetermined for C4. Unit 
 | Status C4 | Hour, minute, day of week, day, month, year, water temp, setpoint, heater, pump 1 running + speed, pump 2, set mode, set screen, cadence, filter / water / UV countdowns (bytes 6, 24, 27) | heat-demand sequence; pump-1 flag in byte 29 | Manual circ; d10.7; d4, d6; heat mode and filter cycle settings; secondary value byte 28 |
 | Lights CA | brightness, mode codes, R/G/B positions, ≈ 1 Hz | c9 blend phase | c0, c3, c5, c7, c10–13 |
 | Commands | 0x00 idle, 0x01/0x02 temp, 0x04 pump 1, 0x05 pump 2, 0x12 light; press semantics; set-mode first press | – | ClearRay 0x0F, 0x11, menu 0x1E on J235 |
-| Bus | Channel 0x10 = topside; CTS ≈ 45 Hz, CC on every CTS; 0x00 ≈ 1 Hz; C4 ≈ 3.3 Hz | CTS-slot rule | Channel request/ack exchange on J235; CTS deadline; 0x04/0x05 semantics |
+| Bus | Channel 0x10 = topside; CTS ≈ 45 Hz, CC on every CTS; 0x00 ≈ 1 Hz; C4 ≈ 3.3 Hz; the board grants a client channel (0x11 to the bridge, D8) | CTS-slot rule | The bytes of the request/ack exchange on J235 (not captured); CTS deadline; 0x04/0x05 semantics |
 | Physical | EW11A transparent bridging | 115200 8N1 | – |
 
 **Still open after D8:** the filter cycle settings and heat mode (need a capture while they
-are changed at the topside), manual circulation and the J235 channel-request handshake. The
+are changed at the topside), manual circulation and the bytes of the J235 channel-request
+exchange. The bridge's claim works (D8: the board polls 0x11, the bridge's channel, as often
+as the topside's 0x10), but no capture holds the request and the answer. The
 FC, H2O and UV countdowns are resolved (bytes 6, 24, 27). In the fold (§5) they sit in d3, d12
 and d13: SC's names for d3 and d12 ("water life", "filter life") are swapped, and the "display
 state" in d13 is mostly the UV countdown.
-The handshake can only be observed by transmitting, which is out of scope for development.
+A capture taken while the bridge claims a channel would record the exchange.
 `tools/capture.py` produces the capture format; drop files into `tests/fixtures/captures/raw/`
 and the replay tests pick them up.
 

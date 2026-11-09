@@ -75,8 +75,9 @@ When you enable transmit:
 The v1 bridge claimed a channel at start-up even when no one pressed a button. Version 2
 does not.
 
-The transmit path is tested against a simulated board. It is not yet confirmed on a real
-J235. Watch the first commands at the topside.
+The transmit path is tested against a simulated board, and runs on the project's own J235
+through the MQTT bridge: the board granted channel `0x11` (protocol.md, D8). Watch the
+first commands at the topside of your own tub.
 
 ### Direct mode (Jacuzzi J345 through a ProLink module)
 

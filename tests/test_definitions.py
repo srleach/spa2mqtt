@@ -101,8 +101,8 @@ def test_field_transforms(j235: Any) -> None:
 def test_keystream(j235: Any) -> None:
     s = j235.status_stream
     assert j235.status_decode == "decrypt" and len(s) == 33 and s[0] == 0
-    assert all(s[i] == 0x19 ^ ((31 - i) % 64) for i in range(1, 33) if i not in (5, 14, 15, 22))
-    assert all(s[i] == 0x19 ^ ((31 - i - 8) % 64) for i in (5, 14, 15, 22))
+    assert all(s[i] == 0x19 ^ ((31 - i) % 64) for i in range(1, 33) if i not in (5, 6, 14, 15, 22))
+    assert all(s[i] == 0x19 ^ ((31 - i - 8) % 64) for i in (5, 6, 14, 15, 22))
 
 
 def test_fold_template_matches_length(j235: Any) -> None:

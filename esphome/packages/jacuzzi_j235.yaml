@@ -20,6 +20,33 @@ sensor:
   unit_of_measurement: °C
   accuracy_decimals: 1
 - platform: spa_bus
+  id: spa_filter_change_days
+  entity: filter_change_days
+  name: Filter Change Days
+  icon: mdi:air-filter
+  entity_category: diagnostic
+  device_class: duration
+  unit_of_measurement: d
+  state_class: measurement
+- platform: spa_bus
+  id: spa_water_change_days
+  entity: water_change_days
+  name: Water Change Days
+  icon: mdi:water-sync
+  entity_category: diagnostic
+  device_class: duration
+  unit_of_measurement: d
+  state_class: measurement
+- platform: spa_bus
+  id: spa_uv_days
+  entity: uv_days
+  name: UV Lamp Days
+  icon: mdi:lightbulb-fluorescent-tube-outline
+  entity_category: diagnostic
+  device_class: duration
+  unit_of_measurement: d
+  state_class: measurement
+- platform: spa_bus
   id: spa_display_state
   entity: display_state
   name: Display State

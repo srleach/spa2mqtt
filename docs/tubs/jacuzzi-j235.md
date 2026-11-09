@@ -30,6 +30,7 @@ The [wire protocol](../protocol.md#5-c4-status-field-map-j235) has the bytes.
 | Secondary Pump Status | Confirmed | Pump 2. Single speed |
 | Heater Active | Confirmed | |
 | Light Mode | Confirmed | `off`, a colour name, `blend` or `blend paused`. MQTT bridge only |
+| Filter Change Days, Water Change Days, UV Lamp Days | Confirmed | The topside menu's FC, H2O and UV countdowns, in days. Diagnostics |
 | Manual Circulation Call | Hypothesis | Never seen set on this tub |
 | Set Mode Active, Display State, Secondary Value Raw | Mixed | Diagnostics, disabled by default |
 
@@ -54,7 +55,8 @@ topside's own presses in a capture. The bridge sends the same codes.
 
 - Light colour, brightness and blend as direct controls. The light has one button: see
   [Known limits](#known-limits).
-- Clock setting, filter cycles, ClearRay, the menu and the maintenance counters.
+- Clock setting, filter cycles, heat mode, ClearRay and the menu. The maintenance
+  countdowns are read only: reset them at the topside.
 - Fahrenheit. The board gives no unit flag, and every capture is in °C. The definition is
   Celsius only.
 
@@ -159,6 +161,7 @@ With transmit off, the bridge and the ESP32 never write to the bus.
     | Pump 2 | Press the pump 2 button on and off |
     | Heater Active | Raise the setpoint above the water temperature. Pump 1 starts on low, then the heater follows about a minute later |
     | Light Mode | Press the light button. MQTT bridge only |
+    | Filter Change Days, Water Change Days, UV Lamp Days | The FC, H2O and UV values in the topside menu |
 
 ## Enable transmit
 
@@ -228,8 +231,8 @@ accepts one client. See [Monitor and capture](../monitor-and-capture.md) for bot
 Open questions that a capture or a test at the tub would answer:
 
 1. Does the board grant a channel to the bridge, as the simulated board does?
-2. What are the maintenance counters? A capture while the reminder values are read from
-   the topside menu would settle it.
+2. Where are the filter cycle settings and the heat mode? A capture while they are
+   changed at the topside would settle it.
 3. What does *Manual Circulation Call* show, if anything?
 4. What are the button codes for ClearRay and the menu on this tub?
 

@@ -14,6 +14,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 CAPTURES = FIXTURES / "captures"
 RAW_D1 = CAPTURES / "raw" / "2025-05-16_j235_c4_frames.log"
 RAW_D7 = CAPTURES / "raw" / "2026-11-04T220754Z_j235_labelled.log"
+RAW_D8 = CAPTURES / "raw" / "2026-11-09T205918Z_j235_menu_values.log"
 DECODED = sorted((CAPTURES / "decoded").glob("*.csv"))
 # The J345 (plain protocol) captures, keyed as definitions/jacuzzi_j345.yaml cites them.
 PLAIN = CAPTURES / "unencrypted"

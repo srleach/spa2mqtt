@@ -279,8 +279,16 @@ with the owner's colour labels as the independent check [A:labelled]:
 | 9 | 0x02 while blending, 0x04 at step, 0 static | Inferred (blend phase/speed) | – |
 | 7, 10–13 | 0 | Unknown | – |
 
-Blend mode animates c2/c6/c8 about once a second. The J235 entity set does not use lights yet
-(design.md non-goal). A raw "light button" is exposed as a button entity.
+Blend mode animates c2/c6/c8 about once a second.
+
+**Light button timing** (Confirmed, D7 t≈294–516 [A:labelled]). A 0x12 press steps to the next
+mode only while it follows the previous light press closely: presses 0.6–3.5 s apart stepped
+blend → blend paused → blue → violet → red → amber → green → aqua → white. A press 5.2 s or more
+after the last one turned the light off (t≈306.1, 323.9, 340.6, 357.3, 373.4, 393.6, 408.6), and a
+press while off turned it on in blend. The owner's label at t≈442: "light changes in steps only
+for few secs then toggles off". The J235 definition reads c1 bit 6 as *Light* (on/off) and c4 as
+*Light Mode*; the *Light* switch waits ≈ 7.5 s between presses so that a press which only
+stepped the colour is followed by one that turns the light off.
 
 ## 4. Bus arbitration and addressing (state machine)
 

@@ -127,7 +127,9 @@ def test_no_name_is_claimed_by_two_definitions() -> None:
 def test_j235_uses_none_of_the_plain_features(j235: Any) -> None:
     assert j235.protocol == "balboa_encrypted" and j235.command_encode == "cc_xor"
     assert j235.bus.mode == "claim" and j235.bus.client_address is None and j235.bus.hello is None
-    assert j235.extra_frames == {} and j235.direct_commands == {} and j235.button_meta == {}
-    assert all(f.frame == "status" for f in j235.fields.values())
-    assert list(j235.decode_status(bytes(33))) == list(j235.fields)
+    assert j235.direct_commands == {} and j235.button_meta == {}
+    assert {k: (x.type, x.decode) for k, x in j235.extra_frames.items()} == {"lights": (0xCA, "fold")}
+    status = [k for k, f in j235.fields.items() if f.frame == "status"]
+    assert list(j235.decode_status(bytes(33))) == status
+    assert {k for k, f in j235.fields.items() if f.frame == "lights"} == {"light_on", "light_mode"}
     assert j235.buttons == {"temp_up": 0x01, "temp_down": 0x02, "pump_1": 0x04, "pump_2": 0x05, "light": 0x12}

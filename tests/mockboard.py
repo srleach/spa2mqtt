@@ -2,7 +2,8 @@
 
 Nothing here touches a real bus. The model follows docs/protocol.md: CTS polling of channel
 0x10 (the topside, which answers every CTS), a new-client 0x00 poll, channel assignment on
-request, C4 status, and set-mode behaviour for temperature presses.
+request, C4 status, set-mode behaviour for temperature presses, and CA lights (§3.5): a light
+press within the step window moves to the next colour, a press after it turns the light off.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from spa2mqtt.definitions import load_definition
-from spa2mqtt.protocol import Frame, cc_decode, cc_encode, decrypt, rekey
+from spa2mqtt.protocol import Frame, cc_decode, cc_encode, decrypt, rekey, unfold
 
 TOPSIDE = 0x10
 # Unkeyed J235 payload (D1), the base the mock writes its per-byte fields into.
@@ -18,6 +19,8 @@ TEMPLATE = bytes.fromhex("000c04050a0e77f30b0f400f321390145a17140c1a1b3b19af1f1c
 _STREAM = load_definition("jacuzzi_j235").status_stream
 assert _STREAM is not None
 PLAIN_TEMPLATE = decrypt(TEMPLATE, _STREAM)  # TEMPLATE has key 0, so decrypt == unkey ^ stream
+# The light modes in press order (D7 t≈294-414): blend, blend paused, then the colours.
+LIGHT_STEPS = [0x80, 0xFF, 0x02, 0x07, 0x06, 0x08, 0x03, 0x09, 0x01]
 
 
 @dataclass
@@ -35,6 +38,9 @@ class MockBoard:
     ignore_presses: int = 0  # simulate presses lost on the bus
     new_client_poll_after: int = 0  # suppress the 0x00 poll for this many cycles (slow channel grant)
     cycles: int = 0
+    light_mode: int = 0  # 0 off, else a LIGHT_STEPS value
+    light_step_cycles: int = 13  # ≈ 4 s at 3.3 Hz: a light press this soon after the last one steps
+    light_pressed_at: int | None = None
 
     def status(self) -> Frame:
         """A J235 status frame built from plaintext (docs/protocol.md §3.3)."""
@@ -63,7 +69,14 @@ class MockBoard:
         if self.set_mode_frames:
             self.set_mode_frames -= 1
         out.append(self.status())
+        if self.cycles % 3 == 0:  # CA ≈ 1 Hz against C4 ≈ 3.3 Hz
+            out.append(self.lights())
         return out
+
+    def lights(self) -> Frame:
+        """A J235 CA lights frame: c1 on/off, c4 mode, keyed and folded (docs/protocol.md §3.5)."""
+        c = bytes([0xBD, 0x64 if self.light_mode else 0, 0, 0x64, self.light_mode, 0xFF] + [0] * 8)
+        return Frame(0xFF, 0xAF, 0xCA, unfold(c, key=0x21))
 
     def receive(self, frame: Frame) -> list[Frame]:
         """Frames the client transmitted. Returns the board's immediate replies."""
@@ -96,3 +109,12 @@ class MockBoard:
             self.pump1 = (self.pump1 + 1) % 3
         elif code == 0x05:
             self.pump2 = not self.pump2
+        elif code == 0x12:
+            recent = self.light_pressed_at is not None and self.cycles - self.light_pressed_at <= self.light_step_cycles
+            if not self.light_mode:
+                self.light_mode = LIGHT_STEPS[0]
+            elif recent:
+                self.light_mode = LIGHT_STEPS[(LIGHT_STEPS.index(self.light_mode) + 1) % len(LIGHT_STEPS)]
+            else:
+                self.light_mode = 0
+            self.light_pressed_at = self.cycles

@@ -63,14 +63,15 @@ def test_cpp_self_checks(replay_binary: Path) -> None:
 def test_esphome_loader_agrees_with_python_loader(j235: TubDefinition) -> None:
     mod = esphome_definition_module()
     raw = mod.load("jacuzzi_j235")
-    assert mod.field_keys(raw) == list(j235.fields)
+    # spa_bus decodes the status frame only; extra-frame fields (J235 lights) are bridge only
+    assert mod.field_keys(raw) == [k for k, f in j235.fields.items() if f.frame == "status"]
     assert {e["key"] for e in raw["entities"]} == {e.key for e in j235.entities}
 
 
 @pytest.mark.parametrize("capture", sorted((CAPTURES / "raw").glob("*.log")), ids=lambda p: p.name)
 def test_cpp_decode_matches_python(replay_binary: Path, capture: Path, j235: TubDefinition) -> None:
     proc = subprocess.run([str(replay_binary), str(capture)], check=True, capture_output=True, text=True)
-    keys = list(j235.fields)
+    keys = [k for k, f in j235.fields.items() if f.frame == "status"]
     cpp: dict[int, dict[str, object]] = {}
     for line in proc.stdout.splitlines():
         frame_s, idx_s, kind, value = line.split(" ", 3)
@@ -83,9 +84,12 @@ def test_cpp_decode_matches_python(replay_binary: Path, capture: Path, j235: Tub
     py: dict[int, dict[str, object]] = {}
 
     def collect(changed: dict[str, object]) -> None:
-        py[tub.state.status_frames] = {
-            k: (float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else v) for k, v in changed.items()
-        }
+        status = {k: v for k, v in changed.items() if k in keys}  # not the lights (CA) fields
+        if status:
+            py[tub.state.status_frames] = {
+                k: (float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else v)
+                for k, v in status.items()
+            }
 
     tub.subscribe(collect)  # type: ignore[arg-type]
     for f in frames_of(capture):

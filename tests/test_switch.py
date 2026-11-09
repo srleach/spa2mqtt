@@ -25,7 +25,7 @@ from .test_ha import FakeClient
 from .test_plain_j345 import run as run_prolink
 
 ROOT = Path(__file__).resolve().parents[1]
-PUMP_1, PUMP_2 = 0x04, 0x05
+PUMP_1, PUMP_2, LIGHT = 0x04, 0x05, 0x12
 
 
 def codes(board: MockBoard) -> list[int]:
@@ -67,32 +67,61 @@ def test_no_press_when_the_state_already_matches(j235: TubDefinition) -> None:
     assert board.presses == [] and board.assigned == []  # not even a channel claim
 
 
-def test_pump_1_on_is_one_press_to_low(j235: TubDefinition) -> None:
-    tub = Tub(j235, transmit=True)
-    board = MockBoard()
-    run(tub, board, 5)
-    tub.set_switch("pump_1_switch", True)
-    run(tub, board, 40)
-    assert codes(board) == [PUMP_1] and board.pump1 == 1
-    assert tub.state.values["pump_1_speed"] == "low"
-
-
-@pytest.mark.parametrize(("start", "presses"), [(1, 2), (2, 1)])
-def test_pump_1_off_steps_through_the_cycle(j235: TubDefinition, start: int, presses: int) -> None:
+@pytest.mark.parametrize(
+    ("key", "start", "presses", "end"),
+    [
+        ("pump_1_switch", 0, 2, 2),  # Pump 1 is the jets: off -> low -> high
+        ("pump_1_switch", 1, 1, 2),
+        ("pump_1_low_switch", 0, 1, 1),
+        ("pump_1_low_switch", 2, 2, 1),  # high -> off -> low
+    ],
+)
+def test_pump_1_on_steps_to_its_speed(j235: TubDefinition, key: str, start: int, presses: int, end: int) -> None:
     tub = Tub(j235, transmit=True)
     board = MockBoard(pump1=start)
     run(tub, board, 5)
+    tub.set_switch(key, True)
+    run(tub, board, 40)
+    assert codes(board) == [PUMP_1] * presses and board.pump1 == end
+
+
+def test_pump_1_off_from_high_is_one_press(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard(pump1=2)
+    run(tub, board, 5)
     tub.set_switch("pump_1_switch", False)
+    run(tub, board, 40)
+    assert codes(board) == [PUMP_1] and board.pump1 == 0
+
+
+def test_pump_1_jets_ignore_the_low_speed(j235: TubDefinition) -> None:
+    """The board runs pump 1 low to heat or filter: the jets switch reads off and is not pressed."""
+    tub = Tub(j235, transmit=True)
+    board = MockBoard(pump1=1)
+    run(tub, board, 5)
+    assert tub.state.values["pump_1_high"] is False and tub.state.values["pump_1_low"] is True
+    tub.set_switch("pump_1_switch", False)
+    run(tub, board, 40)
+    assert board.presses == [] and board.pump1 == 1
+
+
+@pytest.mark.parametrize(("start", "presses"), [(1, 2), (2, 1)])
+def test_pump_1_low_off_steps_through_the_cycle(j235: TubDefinition, start: int, presses: int) -> None:
+    """Off is pump 1 fully off (off_field), so from low it passes through high."""
+    tub = Tub(j235, transmit=True)
+    board = MockBoard(pump1=start)
+    run(tub, board, 5)
+    tub.set_switch("pump_1_low_switch", False)
     run(tub, board, 40)
     assert codes(board) == [PUMP_1] * presses and board.pump1 == 0
 
 
 def test_speed_change_lets_the_second_press_follow_at_once(j235: TubDefinition) -> None:
-    """low -> high leaves the switch's field on; the speed shows that the press landed."""
+    """low -> high leaves pump 1 running; the speed shows that the press landed."""
     tub = Tub(j235, transmit=True)
     board = MockBoard(pump1=1)
     run(tub, board, 5)
-    tub.set_switch("pump_1_switch", False)
+    tub.set_switch("pump_1_low_switch", False)
     run(tub, board, 9)  # fewer cycles than one confirm window (claim + two presses)
     assert codes(board) == [PUMP_1, PUMP_1] and board.pump1 == 0
 
@@ -113,11 +142,48 @@ def test_switch_gives_up_after_max_presses(j235: TubDefinition, caplog: pytest.L
     tub = Tub(j235, transmit=True)
     board = MockBoard(pump1=1, ignore_presses=99)
     run(tub, board, 5)
-    tub.set_switch("pump_1_switch", False)
+    tub.set_switch("pump_1_low_switch", False)
     run(tub, board, 200)
     assert codes(board) == [PUMP_1] * 3
-    assert tub.switches["pump_1_switch"].target is None
+    assert tub.switches["pump_1_low_switch"].target is None
     assert "did not turn off after 3 presses" in caplog.text
+
+
+# -- J235 light: CA frame, button steps the colour within a few seconds, else toggles -------
+
+
+def test_light_state_comes_from_the_lights_frame(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=False)
+    run(tub, MockBoard(light_mode=0x02), 5)
+    assert (tub.state.values["light_on"], tub.state.values["light_mode"]) == (True, "blue")
+    run(tub, MockBoard(), 5)
+    assert (tub.state.values["light_on"], tub.state.values["light_mode"]) == (False, "off")
+
+
+def test_light_on_and_off_after_a_pause_take_one_press_each(j235: TubDefinition) -> None:
+    tub = Tub(j235, transmit=True)
+    board = MockBoard()
+    run(tub, board, 5)
+    tub.set_switch("light_switch", True)
+    run(tub, board, 40)
+    assert codes(board) == [LIGHT] and tub.state.values["light_mode"] == "blend"
+    tub.set_switch("light_switch", False)
+    run(tub, board, 40)
+    assert codes(board) == [LIGHT, LIGHT] and board.light_mode == 0
+
+
+def test_light_off_soon_after_on_waits_out_the_step_window(j235: TubDefinition) -> None:
+    """A press inside the window only steps the colour; the retry comes after it, and turns off."""
+    tub = Tub(j235, transmit=True)
+    board = MockBoard()
+    run(tub, board, 5)
+    tub.set_switch("light_switch", True)
+    run(tub, board, 6)
+    assert board.light_mode == 0x80
+    tub.set_switch("light_switch", False)
+    run(tub, board, 60)
+    assert codes(board) == [LIGHT, LIGHT, LIGHT] and board.light_mode == 0
+    assert tub.switches["light_switch"].target is None
 
 
 def test_new_target_replaces_the_old_one(j235: TubDefinition) -> None:
@@ -207,7 +273,7 @@ def test_switch_discovery_and_commands(j235: TubDefinition, caplog: pytest.LogCa
     bridge.handle_command("spa2mqtt/jacuzzi_j235/pump_1_switch/set", "toggle")
     assert "bad payload 'toggle'" in caplog.text
     run(tub, board, 20)
-    assert codes(board) == [PUMP_1]
+    assert codes(board) == [PUMP_1, PUMP_1]  # off -> low -> high
 
 
 def test_switch_commands_ignored_when_transmit_disabled(j235: TubDefinition, caplog: pytest.LogCaptureFixture) -> None:
@@ -238,6 +304,8 @@ def switch(data: dict[str, Any], key: str) -> dict[str, Any]:
         ("jacuzzi_j235", lambda s: s.update(field="nope"), "unknown field 'nope'"),
         ("jacuzzi_j235", lambda s: s.update(press="nope"), "unknown button 'nope'"),
         ("jacuzzi_j235", lambda s: s.update(progress_field="nope"), "unknown field 'nope'"),
+        ("jacuzzi_j235", lambda s: s.update(off_field="nope"), "unknown field 'nope'"),
+        ("jacuzzi_j235", lambda s: s.update(off_field="pump_1_speed"), "off_field must be a bit field"),
         ("jacuzzi_j235", lambda s: s.update(max_presses=0), "schema violation"),
         ("jacuzzi_j235", lambda s: s.update(retries=2), "schema violation"),
         ("jacuzzi_j345", lambda s: s.update(max_presses=2), "max_presses must be 1 with bus.mode direct"),

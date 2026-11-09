@@ -97,7 +97,7 @@ keys are unique.
 | `ha` | Optional. `device_name` and `device_identifier` for Home Assistant, used when `config.yml` sets neither. Defaults: `name` and `id` |
 | `bus` | Bus settings: `baud`, `client_mid`, `channel_request_magic`, `dormant_channel_threshold`. The last three are used only when transmit is on. See also [Direct bus mode](#direct-bus-mode) |
 | `status` | How to decode the status frame. See [Decode modes](#decode-modes) |
-| `extra_frames` | `jacuzzi_plain` only. Further periodic frames that fields may read. See [Extra frames](#extra-frames) |
+| `extra_frames` | Further periodic frames that fields may read. See [Extra frames](#extra-frames) |
 | `commands` | Button frame type, encoding (`cc_xor` or `plain`), the code of each button, and [direct commands](#direct-commands) |
 | `fields` | The field map. See [Fields](#fields) |
 | `entities` | What Home Assistant gets. See [Entities](#entities) |
@@ -171,6 +171,20 @@ A field without `frame` reads the status frame. The loader checks the byte offse
 the length of the frame the field names. Values from an extra frame merge into the same
 state as the status values.
 
+On an encrypted board (`balboa_encrypted`) an extra frame is keyed, so it needs
+`decode: fold`. Fields then index the folded payload, `d[j] = p[2j] ^ p[2j+1] ^ 1`, which is
+`length // 2` bytes long. The J235 lights frame:
+
+```yaml
+extra_frames:
+  lights: {type: 0xCA, length: 29, decode: fold}
+fields:
+  light_on: {frame: lights, byte: 1, bit: 6, status: confirmed, evidence: "D7 t~294 on, 307 off"}
+```
+
+`decode: plain` (the default) is for `jacuzzi_plain` only. The ESPHome component decodes the
+status frame only: its package leaves out entities that read an extra frame.
+
 ### Buttons and direct commands
 
 `commands.buttons` maps a button name to its one-byte code. The short form is the code
@@ -230,7 +244,7 @@ Each entity maps a field or a button to a Home Assistant entity.
 | `binary_sensor` | `field` | Optional `device_class` |
 | `text_sensor` | `field` | For mapped values such as pump speed. Home Assistant shows it as a sensor with a text value |
 | `button` | `press` | A button name from `commands.buttons`, or a direct command with no `value` |
-| `switch` | `field`, `press` | An on/off state that a toggle button changes. `field` is a bit field. Optional `confirm_frames`, `max_presses`, `progress_field`, `device_class`. Bridge only |
+| `switch` | `field`, `press` | An on/off state that a toggle button changes. `field` is a bit field. Optional `off_field`, `confirm_frames`, `max_presses`, `progress_field`, `device_class`. Bridge only |
 | `number` | `field`, `control`, `min`, `max`, `step` | `control: {type: stepper, up:, down:}` presses the up and down buttons until the field matches. `control: {type: direct, command:}` sends one direct command with the value |
 
 A `direct` number needs a one-byte field with no `scale`, `offset`, `xor`, `shift` or
@@ -247,6 +261,12 @@ early turns a two-state pump straight back.
 Some pumps cycle off, low, high, off, so "off" from low takes two presses and the field
 stays on in between. Name the speed field as `progress_field`. A change there shows that
 the press arrived, and the next press follows without the wait.
+
+A switch for one speed of such a pump reads that speed's bit, but its "off" should be the
+pump fully off, not the next speed. Name the "running at any speed" bit as `off_field`:
+"off" is then reached when that field reads false. The J235 *Pump 1 Low* switch reads
+`pump_1_low` and has `off_field: pump_1_running`, so turning it off from low steps through
+high to off.
 
 With `bus.mode: direct` a switch sends one frame and never retries, so `max_presses` must
 be `1` (the default there).

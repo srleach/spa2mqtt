@@ -207,4 +207,7 @@ def test_bridge_clears_the_config_it_used_to_publish_as_text_sensor(j235: TubDef
     bridge.publish_discovery()
     assert ("homeassistant/text_sensor/Jacuzzi-J235/Pump-1-Speed/config", "", True) in client.published
     cleared = [t for t, p, _ in client.published if p == ""]
-    assert cleared == ["homeassistant/text_sensor/Jacuzzi-J235/Pump-1-Speed/config"]
+    assert cleared == [
+        "homeassistant/text_sensor/Jacuzzi-J235/Pump-1-Speed/config",
+        "homeassistant/text_sensor/Jacuzzi-J235/Light-Mode/config",  # never published; clearing is harmless
+    ]

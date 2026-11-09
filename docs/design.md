@@ -21,8 +21,9 @@ implementation are recorded in §11 and in the pull request.
 
 **Non-goals (this PR)**
 
-* Lights, filter-cycle programming, menu automation, climate entity. The definition schema
-  can express them later; there is no J235 evidence for them yet (protocol.md §9).
+* Filter-cycle programming, menu automation, climate entity, light colour selection. The
+  definition schema can express them later; there is no J235 evidence for them yet
+  (protocol.md §9). Since §10 row 16 the J235 light is an on/off switch with its mode shown.
 * Unencrypted (0x16) Jacuzzi boards on a direct RS485 tap, and on ESPHome. Since §11 row
   12 the bridge supports one such tub, the J345, through its ProLink module only
   (`protocol: jacuzzi_plain`, [protocol-plain.md](protocol-plain.md)). The legacy
@@ -254,12 +255,15 @@ Implemented as in protocol.md §4, with these choices:
   lands.
 * Buttons enqueue a single press. There is no de-duplication; HA buttons are momentary.
 * **ToggleController** (`switch` entities): the target is on or off. On each status frame:
-  1. If the field equals the target, done. No press is sent when it already does.
+  1. If the field equals the target, done. No press is sent when it already does. With an
+     `off_field`, "off" is reached when that field reads false instead (pump 1 low → high is
+     not off).
   2. Otherwise, at most one press is in flight. Press, then wait `confirm_frames` (default
      10) status frames for the field to follow. A change in `progress_field` (a pump speed)
      ends the wait at once: the press landed, and the cycle needs another.
-  3. Give up after `max_presses` (default 3), logged. The J235 board keeps pump 1 on while
-     it heats or filters, so "off" can be impossible.
+  3. Give up after `max_presses` (default 3), logged. The J235 board keeps pump 1 low while
+     it heats or filters, so "Pump 1 Low" off can be impossible. "Pump 1" (the jets) reads
+     pump 1 high only, so the board's own low speed does not show it on.
 
 **Direct bus mode** (`bus.mode: direct`, protocol-plain.md §6–§7). A ProLink module's TCP
 stream has no CTS, so `DirectBusClient` replaces the claim logic for `jacuzzi_plain`
@@ -408,6 +412,7 @@ jobs `python`, `cpp`, `esphome`.
 | 13 | A `text_sensor` is published to Home Assistant as a `sensor`. The bridge clears the retained config it used to publish under `text_sensor`. | Home Assistant's MQTT discovery has no `text_sensor` component, so Pump 1 Speed and Light Mode never appeared. `text_sensor` stays in definitions because it is the ESPHome platform name. |
 | 14 | Pump switches are new entities next to the pump buttons, and they are bridge-only. | The buttons keep their keys and names, so no Home Assistant entity changes. The ESPHome component would need a new platform and a second controller in the C++ core; the package generator leaves switches out until then. |
 | 15 | `spa2mqtt capture` compares keyed frames after removing the key, and writes the capture file format. | The J235 re-keys every status, lights and panel frame, so a byte comparison would suppress nothing. A dump that replays needs no second parser. |
+| 16 | J235 *Pump 1* reads pump 1 high (jets); a new *Pump 1 Low* switch covers the low speed, with `off_field: pump_1_running`. The J235 lights frame (CA) is an extra frame with `decode: fold`, giving a *Light* switch and *Light Mode*. Extra-frame entities are bridge only. | *Pump 1* on "running at any speed" came back on whenever the board started pump 1 low to heat or filter, and the low speed had no control. The ESPHome component decodes the status frame only, so its loader and the package generator leave extra-frame fields out. |
 
 ## 11. Deviations from this plan
 

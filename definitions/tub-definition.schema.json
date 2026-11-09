@@ -119,7 +119,7 @@
     },
     "extra_frames": {
       "type": "object",
-      "description": "jacuzzi_plain only. Further periodic board frames whose payload fields may index (field key 'frame').",
+      "description": "Further periodic board frames whose payload fields may index (field key 'frame').",
       "propertyNames": {"$ref": "#/$defs/key"},
       "additionalProperties": {
         "type": "object",
@@ -127,7 +127,8 @@
         "required": ["type", "length"],
         "properties": {
           "type": {"$ref": "#/$defs/byte"},
-          "length": {"type": "integer", "minimum": 1, "maximum": 64}
+          "length": {"type": "integer", "minimum": 1, "maximum": 64, "description": "Raw payload length."},
+          "decode": {"enum": ["plain", "fold"], "description": "plain (default, jacuzzi_plain only) or fold (other protocols: d[j] = p[2j] ^ p[2j+1] ^ 1; field bytes index the folded payload)."}
         }
       }
     },
@@ -246,6 +247,7 @@
           "properties": {
             "component": {"const": "switch"},
             "field": {"$ref": "#/$defs/key", "description": "Bit field that reads the on/off state."},
+            "off_field": {"$ref": "#/$defs/key", "description": "Bit field that must read false for 'off' to be reached. Default: field. Use it when pressing passes through a state that clears field but is not off."},
             "press": {"$ref": "#/$defs/key", "description": "Toggle button (or a direct command without a value). It is pressed until the field reads the wanted state."},
             "confirm_frames": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Status frames to wait for the state to follow a press before pressing again. Default 10."},
             "max_presses": {"type": "integer", "minimum": 1, "maximum": 6, "description": "Presses per change before giving up. Default 3. Must be 1 with bus.mode direct."},

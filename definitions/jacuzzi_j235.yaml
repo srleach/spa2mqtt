@@ -37,6 +37,11 @@ status:
   # fold-only logs (the decoded CSV fixtures).
   fold_template: "000c04050a0e77f30b0f400f321390145a17140c1a1b3b19af1f1c504363202126"
 
+# Lights (CA, ≈ 1 Hz). Keyed like the status frame; fields index the folded payload c0..c13
+# (protocol.md §3.5).
+extra_frames:
+  lights: {type: 0xCA, length: 29, decode: fold}
+
 commands:
   type: 0xCC
   encode: cc_xor
@@ -71,6 +76,8 @@ fields:
     {byte: 2, bit: 6, status: confirmed, description: "Pump 1 at any speed (J235 circulates on pump 1 low)", evidence: "protocol.md §3.3, §5 d1; D7 t~90-144"}
   pump_1_high:
     {byte: 5, bit: 4, status: confirmed, evidence: "protocol.md §3.3, §5 d2; D7 t~119"}
+  pump_1_low:
+    {byte: 5, bit: 3, status: confirmed, description: "Pump 1 on low speed (pump_1_speed 1; the speed never reads 3)", evidence: "protocol.md §3.3, §5 d2; D7 t~90/119/143"}
   pump_1_speed:
     {byte: 5, shift: 3, mask: 0x03, map: {"0": "off", "1": "low", "2": "high"}, status: confirmed, evidence: "protocol.md §3.3, §5 d2; D7 t~90/119/143"}
   pump_2:
@@ -87,6 +94,10 @@ fields:
     {byte: 27, status: hypothesis, description: "Display or alert code: 0x4D in May 2025, 0x99 in Nov 2026 (the old fold 'display state')", evidence: "protocol.md §3.3"}
   secondary_value_raw:
     {byte: 28, status: hypothesis, description: "Unknown counter (the pump-1 flag is a separate byte now)", evidence: "protocol.md §3.3, §5 d14"}
+  light_on:
+    {frame: lights, byte: 1, bit: 6, status: confirmed, description: "c1 reads 0x64 on, 0 off (bit 6 is set only at 0x64)", evidence: "protocol.md §3.5; D7 t~294 on, 307 off, and every later on/off"}
+  light_mode:
+    {frame: lights, byte: 4, map: {"0": "off", "1": "white", "2": "blue", "3": "green", "6": "red", "7": "violet", "8": "amber", "9": "aqua", "128": "blend", "255": "blend paused"}, status: confirmed, evidence: "protocol.md §3.5; D7 press sequence t~294-414"}
 
 entities:
   # --- sensors (legacy set; names define the legacy discovery topics) ---
@@ -176,15 +187,24 @@ entities:
     mode: slider
 
   # --- new entities (not in the legacy set) ---
-  # Pump 1 cycles off -> low -> high -> off, so "off" from low takes two presses; the speed
-  # shows each step. The board runs pump 1 low by itself while it heats or filters: it then
-  # stays on, and the switch gives up after max_presses.
+  # Pump 1 cycles off -> low -> high -> off; the speed shows each step. "Pump 1" is the jets
+  # (high): it does not follow the low speed the board runs by itself while it heats or
+  # filters. "Pump 1 Low" is that low speed; its "off" is pump 1 fully off, so from low it
+  # steps through high. While the board holds pump 1 low, Pump 1 Low gives up after max_presses.
   - key: pump_1_switch
     component: switch
-    field: pump_1_running
+    field: pump_1_high
     press: pump_1
     progress_field: pump_1_speed
     name: Pump 1
+    icon: mdi:pump
+  - key: pump_1_low_switch
+    component: switch
+    field: pump_1_low
+    off_field: pump_1_running
+    press: pump_1
+    progress_field: pump_1_speed
+    name: Pump 1 Low
     icon: mdi:pump
   - key: pump_2_switch
     component: switch
@@ -197,6 +217,22 @@ entities:
     field: pump_1_speed
     name: Pump 1 Speed
     icon: mdi:pump
+  # The light button steps off -> blend -> colours while presses come within a few seconds of
+  # each other; after a pause, a press turns the light off (D7 t~294-516). A press that only
+  # stepped the colour is followed by the next one after confirm_frames (~7.5 s at 3.3 Hz), past
+  # that window, so it turns the light off. Bridge only: the ESPHome component has no CA frames.
+  - key: light_switch
+    component: switch
+    field: light_on
+    press: light
+    confirm_frames: 25
+    name: Light
+    icon: mdi:lightbulb
+  - key: light_mode
+    component: text_sensor
+    field: light_mode
+    name: Light Mode
+    icon: mdi:palette
   - key: set_mode_active
     component: binary_sensor
     field: set_mode

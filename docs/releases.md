@@ -95,7 +95,7 @@ The workflow `.github/workflows/docs.yml` does two jobs:
 - On every push to `main`, it builds the site again and publishes it to the `gh-pages`
   branch.
 
-The site appears at <https://srleach.github.io/spa2mqtt/> once GitHub Pages is on. The
+The site appears at <https://seanrleach.co.uk/spa2mqtt/> once GitHub Pages is on. The
 repository owner enables it once:
 
 1. Open the repository on GitHub and select **Settings > Pages**.

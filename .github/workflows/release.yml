@@ -164,7 +164,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=spa2mqtt
             org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.documentation=https://srleach.github.io/spa2mqtt/
+            org.opencontainers.image.documentation=https://seanrleach.co.uk/spa2mqtt/
 
       - name: Build and push
         id: build

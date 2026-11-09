@@ -5,7 +5,7 @@
 # There are no volumes on purpose: Portainer on Home Assistant OS cannot bind-mount files
 # ("mkdir /data: read-only file system").
 #
-# Guide: https://srleach.github.io/spa2mqtt/install/portainer/
+# Guide: https://seanrleach.co.uk/spa2mqtt/install/portainer/
 
 services:
   spa2mqtt:

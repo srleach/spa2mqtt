@@ -3,7 +3,7 @@
 #   cp .env.example .env     # then edit .env
 #   docker compose up -d
 #
-# Guide: https://srleach.github.io/spa2mqtt/install/docker-compose/
+# Guide: https://seanrleach.co.uk/spa2mqtt/install/docker-compose/
 name: spa2mqtt
 
 services:

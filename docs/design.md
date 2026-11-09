@@ -168,7 +168,7 @@ fields:                                 # decoded-payload field map
 
 entities:
   - key: current_temperature            # stable key = HA unique_id suffix (legacy: whole id)
-    component: sensor                   # sensor | binary_sensor | button | number | text_sensor
+    component: sensor                   # sensor | binary_sensor | button | number | text_sensor | switch
     field: water_temperature
     name: Current Water Temperature
     device_class: temperature
@@ -253,6 +253,13 @@ Implemented as in protocol.md §4, with these choices:
   This replaces the legacy approach of queueing *N* presses at once and assuming each one
   lands.
 * Buttons enqueue a single press. There is no de-duplication; HA buttons are momentary.
+* **ToggleController** (`switch` entities): the target is on or off. On each status frame:
+  1. If the field equals the target, done. No press is sent when it already does.
+  2. Otherwise, at most one press is in flight. Press, then wait `confirm_frames` (default
+     10) status frames for the field to follow. A change in `progress_field` (a pump speed)
+     ends the wait at once: the press landed, and the cycle needs another.
+  3. Give up after `max_presses` (default 3), logged. The J235 board keeps pump 1 on while
+     it heats or filters, so "off" can be impossible.
 
 **Direct bus mode** (`bus.mode: direct`, protocol-plain.md §6–§7). A ProLink module's TCP
 stream has no CTS, so `DirectBusClient` replaces the claim logic for `jacuzzi_plain`
@@ -269,6 +276,8 @@ definitions:
 * A `number` with `control.type: direct` is one frame with the value rounded to `step`. A
   value outside `min`..`max` is refused, not clamped. There is no `SetpointController` and
   no retry: pyjacuzzi sent each command once, and all took.
+* A `switch` is one frame, sent only when the field differs from the target. The loader
+  requires `max_presses: 1`.
 * A direct command may carry `requires` (status bit fields and the value each must have).
   `Tub` refuses the command (`CommandBlocked`) when the last status frame disagrees or none
   has been decoded. The J345 uses it to block the setpoint in Celsius mode.
@@ -396,6 +405,9 @@ jobs `python`, `cpp`, `esphome`.
 | 10 | Wire format for captures is `<epoch> RX <hex>` / `MARK`. | Same file from the capture tool, the replay transport, and the tests. |
 | 11 | A tub nobody on the project can test may transmit only frames a capture shows working. Every button and direct command carries a status and evidence, and a test enumerates what the definition can emit. | The J345 is driven on the strength of its owner's pyjacuzzi capture. A decode error shows a wrong value; a wrong frame acts on someone else's tub. |
 | 12 | The Home Assistant device name and identifier default from the tub definition (`ha:`, else `name` and `id`). The J235 pins `185569045` in its YAML. | Environment-only installs (Portainer on Home Assistant OS) cannot set `ha:` keys, and a second tub must not appear as "Jacuzzi J235". |
+| 13 | A `text_sensor` is published to Home Assistant as a `sensor`. The bridge clears the retained config it used to publish under `text_sensor`. | Home Assistant's MQTT discovery has no `text_sensor` component, so Pump 1 Speed and Light Mode never appeared. `text_sensor` stays in definitions because it is the ESPHome platform name. |
+| 14 | Pump switches are new entities next to the pump buttons, and they are bridge-only. | The buttons keep their keys and names, so no Home Assistant entity changes. The ESPHome component would need a new platform and a second controller in the C++ core; the package generator leaves switches out until then. |
+| 15 | `spa2mqtt capture` compares keyed frames after removing the key, and writes the capture file format. | The J235 re-keys every status, lights and panel frame, so a byte comparison would suppress nothing. A dump that replays needs no second parser. |
 
 ## 11. Deviations from this plan
 

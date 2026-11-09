@@ -295,6 +295,19 @@ entities:
     component: button
     press: pump_2
     name: Pump 2 Button
+  # One button frame, and only when the pump's state differs from the wanted one. No retry.
+  - key: pump_1_switch
+    component: switch
+    field: pump_1
+    press: pump_1
+    name: Pump 1
+    icon: mdi:pump
+  - key: pump_2_switch
+    component: switch
+    field: pump_2
+    press: pump_2
+    name: Pump 2
+    icon: mdi:pump
   - key: light_brightness
     component: number
     field: light_brightness

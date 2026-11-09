@@ -191,8 +191,8 @@ in place:
   enable transmit. v1 transmitted by default.
 - State topics move from `hmd/...` to `spa2mqtt/jacuzzi_j235/...`. Home Assistant follows
   the change through discovery, so you do nothing.
-- New entities: *Pump 1 Speed*, *Light Button*, and diagnostics that are disabled by
-  default.
+- New entities: *Pump 1 Speed*, *Light Button*, the *Pump 1* and *Pump 2* switches, and
+  diagnostics that are disabled by default.
 - *Main Pump Status* is pump 1 on **high**. *Circulation Pump Status* is pump 1 running at
   any speed, because the J235 circulates on pump 1 low.
 

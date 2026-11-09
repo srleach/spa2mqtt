@@ -7,7 +7,7 @@ from dataclasses import field as dc_field
 from typing import Literal
 
 FieldValue = bool | int | float | str | None
-Component = Literal["sensor", "binary_sensor", "text_sensor", "button", "number"]
+Component = Literal["sensor", "binary_sensor", "text_sensor", "button", "number", "switch"]
 Status = Literal["confirmed", "inferred", "hypothesis"]
 
 
@@ -86,6 +86,18 @@ class StateEntity(EntityDef):
 @dataclass(frozen=True, slots=True)
 class ButtonEntity(EntityDef):
     press: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class SwitchEntity(EntityDef):
+    """An on/off state (a bit field) reached by pressing a toggle button until it reads right."""
+
+    field: str = ""
+    press: str = ""
+    confirm_frames: int = 10
+    max_presses: int = 3
+    progress_field: str | None = None
+    device_class: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

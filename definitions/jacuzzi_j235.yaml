@@ -176,6 +176,22 @@ entities:
     mode: slider
 
   # --- new entities (not in the legacy set) ---
+  # Pump 1 cycles off -> low -> high -> off, so "off" from low takes two presses; the speed
+  # shows each step. The board runs pump 1 low by itself while it heats or filters: it then
+  # stays on, and the switch gives up after max_presses.
+  - key: pump_1_switch
+    component: switch
+    field: pump_1_running
+    press: pump_1
+    progress_field: pump_1_speed
+    name: Pump 1
+    icon: mdi:pump
+  - key: pump_2_switch
+    component: switch
+    field: pump_2
+    press: pump_2
+    name: Pump 2
+    icon: mdi:pump
   - key: pump_1_speed
     component: text_sensor
     field: pump_1_speed

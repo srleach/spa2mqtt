@@ -27,7 +27,7 @@ tub. *Hypothesis* means a pattern in the data only. The
 | Pump 1, Pump 2 | Confirmed | On or off. A low speed, if a pump has one, would read as off |
 | Circulation Pump | Inferred | |
 | Heater Active | Hypothesis | Follows the thermostat in the captures. No reference names the bit |
-| Light Mode | Confirmed | `off`, a colour name, `blend` or `blend paused`. Not shown in Home Assistant yet: see [Known limits](#known-limits) |
+| Light Mode | Confirmed | `off`, a colour name, `blend` or `blend paused` |
 | Light Brightness | Confirmed | Percent |
 | Secondary Temperature, Flow Switch, CLEARRAY Days Remaining | Inferred | Diagnostics |
 | Set Mode Active, Reminder Active, Celsius Mode, Display State, State Raw, Error Code, Light Red, Light Green, Light Blue | Mixed | Diagnostics, disabled by default |
@@ -40,6 +40,7 @@ All controls are unavailable until you [enable transmit](#enable-transmit).
 |---|---|---|
 | Temperature Set Control | Confirmed for 90, 100 and 101 °F | One set-temperature frame. Range 80 to 104 °F, step 1 |
 | Pump 1 Button, Pump 2 Button | Confirmed | One button frame. Each press toggles the pump |
+| Pump 1, Pump 2 (switches) | Confirmed | The same button frame, sent only when the pump is not already in the state you chose. One frame, no retry |
 | Light White … Light Aqua (nine buttons) | Confirmed | One light frame that selects the colour |
 | Light Brightness | Confirmed for 0, 20, 40, 60, 80, 100, with a colour already on | One light frame. `0` turns the lights off. Select a colour first: see [Known limits](#known-limits) |
 
@@ -214,11 +215,6 @@ them are ignored when the log is replayed.
 
 ## Known limits
 
-- **Light Mode does not appear in Home Assistant.** It is a `text_sensor`, and the bridge
-  publishes its discovery under that component name, which Home Assistant's MQTT
-  integration does not create. The value is in the monitor's reports and on the topic
-  `spa2mqtt/jacuzzi_j345/light_mode/state`. *Light Brightness* and the disabled-by-default
-  *Light Red*, *Green* and *Blue* sensors do appear.
 - **Fahrenheit only.** Celsius mode on this board was never captured. Keep the topside in
   °F. If the *Celsius Mode* bit is set, the bridge refuses *Temperature Set Control* and
   logs a warning: pyjacuzzi sends half degrees Celsius in the same byte in that mode, so

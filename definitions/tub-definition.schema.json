@@ -242,6 +242,21 @@
           "allOf": [{"$ref": "#/$defs/entity_common"}],
           "type": "object",
           "unevaluatedProperties": false,
+          "required": ["field", "press"],
+          "properties": {
+            "component": {"const": "switch"},
+            "field": {"$ref": "#/$defs/key", "description": "Bit field that reads the on/off state."},
+            "press": {"$ref": "#/$defs/key", "description": "Toggle button (or a direct command without a value). It is pressed until the field reads the wanted state."},
+            "confirm_frames": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Status frames to wait for the state to follow a press before pressing again. Default 10."},
+            "max_presses": {"type": "integer", "minimum": 1, "maximum": 6, "description": "Presses per change before giving up. Default 3. Must be 1 with bus.mode direct."},
+            "progress_field": {"$ref": "#/$defs/key", "description": "Field that changes on every press (a pump speed), so a multi-step cycle need not wait."},
+            "device_class": {"type": "string"}
+          }
+        },
+        {
+          "allOf": [{"$ref": "#/$defs/entity_common"}],
+          "type": "object",
+          "unevaluatedProperties": false,
           "required": ["field", "control", "min", "max", "step"],
           "properties": {
             "component": {"const": "number"},

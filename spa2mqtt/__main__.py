@@ -1,4 +1,4 @@
-"""Command line: ``python -m spa2mqtt {run,monitor,replay,validate,definitions}``."""
+"""Command line: ``python -m spa2mqtt {run,monitor,capture,replay,validate,definitions}``."""
 
 from __future__ import annotations
 
@@ -13,7 +13,8 @@ from pathlib import Path
 
 from .config import TransportConfig, load_config
 from .definitions import DefinitionError, available_definitions, load_definition
-from .definitions.model import FieldValue
+from .definitions.model import FieldValue, TubDefinition
+from .transport import Transport
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -38,6 +39,15 @@ def main(argv: list[str] | None = None) -> int:
     p_mon.add_argument("--serial", metavar="DEVICE", help="read a USB RS485 adapter instead of TCP")
     p_mon.add_argument("--replay", metavar="CAPTURE", type=Path, help="decode a capture file instead of the bus")
     p_mon.add_argument("--speed", type=float, default=0.0, help="replay speed (0 = as fast as possible)")
+    p_cap = sub.add_parser("capture", help="read-only dump of the bus frames, repeats left out (never transmits)")
+    p_cap.add_argument("host", nargs="?", help="RS485-to-TCP bridge address, e.g. the EW11A")
+    p_cap.add_argument("-p", "--port", type=int, default=8899)
+    p_cap.add_argument("-d", "--definition", default="jacuzzi_j235")
+    p_cap.add_argument("-o", "--output", metavar="FILE", help="append to FILE instead of printing")
+    p_cap.add_argument("--all", action="store_true", help="print every frame, repeats too")
+    p_cap.add_argument("--serial", metavar="DEVICE", help="read a USB RS485 adapter instead of TCP")
+    p_cap.add_argument("--replay", metavar="CAPTURE", type=Path, help="read a capture file instead of the bus")
+    p_cap.add_argument("--speed", type=float, default=0.0, help="replay speed (0 = as fast as possible)")
     p_val = sub.add_parser("validate", help="validate tub definition files")
     p_val.add_argument("definitions", nargs="*")
     sub.add_parser("definitions", help="list available tub definitions")
@@ -74,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "monitor":
         return _monitor(args)
+    if args.cmd == "capture":
+        return _capture(args)
     if args.cmd == "validate":
         targets = args.definitions or sorted(set(available_definitions().values()))
         ok = True
@@ -92,25 +104,57 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _monitor(args: argparse.Namespace) -> int:
-    from .monitor import Monitor, open_record
-    from .transport import ReplayTransport, TcpTransport, Transport
+def _source(args: argparse.Namespace, definition: TubDefinition) -> tuple[Transport, Callable[[], float]] | None:
+    """The transport that ``monitor`` and ``capture`` read, and the clock to stamp it with."""
+    from .transport import ReplayTransport, TcpTransport
     from .transport.serial import SerialTransport
 
-    definition = load_definition(args.definition)
-    transport: Transport
-    clock: Callable[[], float] = time.time
     if args.replay:
         replay = ReplayTransport(args.replay, speed=args.speed, definition=definition)
-        transport = replay
-        clock = lambda: replay.current_time  # noqa: E731 - report on the capture's own timeline
-    elif args.serial:
-        transport = SerialTransport(args.serial, definition.bus.baud)
-    elif args.host:
-        transport = TcpTransport(args.host, args.port)
-    else:
-        print("monitor: give a bridge HOST, --serial DEVICE or --replay CAPTURE", file=sys.stderr)
+        return replay, lambda: replay.current_time  # report on the capture's own timeline
+    if args.serial:
+        return SerialTransport(args.serial, definition.bus.baud), time.time
+    if args.host:
+        return TcpTransport(args.host, args.port), time.time
+    print(f"{args.cmd}: give a bridge HOST, --serial DEVICE or --replay CAPTURE", file=sys.stderr)
+    return None
+
+
+def _capture(args: argparse.Namespace) -> int:
+    from .monitor import FrameLog
+
+    definition = load_definition(args.definition)
+    source = _source(args, definition)
+    if source is None:
         return 2
+    transport, clock = source
+    out = Path(args.output).open("a", encoding="ascii") if args.output else sys.stdout  # noqa: SIM115
+    frames = FrameLog(definition, out, suppress=not args.all, clock=clock)
+    src = args.replay or args.serial or f"{args.host}:{args.port}"
+    out.write(
+        f"# spa2mqtt capture: {definition.name} from {src}, started {time.strftime('%Y-%m-%dT%H:%M:%S%z')}. "
+        f"Read-only. {'Every frame' if args.all else 'Repeated frames are left out'}.\n"
+    )
+    try:
+        asyncio.run(frames.run(transport, reconnect=not args.replay))
+    except KeyboardInterrupt:
+        pass
+    finally:
+        frames.summary()
+        if out is not sys.stdout:
+            out.close()
+            print(f"capture appended to {args.output}")
+    return 0
+
+
+def _monitor(args: argparse.Namespace) -> int:
+    from .monitor import Monitor, open_record
+
+    definition = load_definition(args.definition)
+    source = _source(args, definition)
+    if source is None:
+        return 2
+    transport, clock = source
     record = open_record(args.record)
     mon = Monitor(
         definition,

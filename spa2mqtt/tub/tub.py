@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 from collections.abc import Callable
+from functools import partial
 
 from ..definitions.model import (
     ButtonEntity,
@@ -13,12 +14,13 @@ from ..definitions.model import (
     FieldValue,
     NumberEntity,
     StepperControl,
+    SwitchEntity,
     TubDefinition,
 )
 from ..protocol.frame import Frame
 from ..transport.base import TransmitForbidden
 from .bus import BOARD_MID, BusClient, DirectBusClient
-from .control import SetpointController
+from .control import SetpointController, ToggleController
 from .state import TubState
 
 log = logging.getLogger(__name__)
@@ -63,6 +65,16 @@ class Tub:
                     max_attempts=e.control.max_attempts,
                     press_queued=lambda: bool(self.bus.queue),
                 )
+        self.switches: dict[str, ToggleController] = {}
+        for e in definition.entities:
+            if isinstance(e, SwitchEntity):
+                self.switches[e.key] = ToggleController(
+                    partial(self._press_switch, e),
+                    name=e.key,
+                    confirm_frames=e.confirm_frames,
+                    max_presses=e.max_presses,
+                    press_queued=lambda: bool(self.bus.queue),
+                )
         self.bad_status_frames = 0
         hyp = [k for k, f in definition.fields.items() if f.status == "hypothesis"]
         if hyp:
@@ -91,6 +103,14 @@ class Tub:
                     float(sp) if isinstance(sp, (int, float)) and not isinstance(sp, bool) else None,
                     mode if isinstance(mode, bool) else None,
                 )
+            for key, toggle in self.switches.items():
+                sw = self.definition.entity(key)
+                assert isinstance(sw, SwitchEntity)
+                on = values.get(sw.field)
+                toggle.on_status(
+                    on if isinstance(on, bool) else None,
+                    values.get(sw.progress_field) if sw.progress_field else None,
+                )
             if changed:
                 for listener in self._listeners:
                     listener(changed)
@@ -115,10 +135,13 @@ class Tub:
         ent = self.definition.entity(entity_key)
         if not isinstance(ent, ButtonEntity):
             raise KeyError(f"{entity_key} is not a button")
-        if ent.press in self.definition.buttons:
-            self._press_code(self.definition.buttons[ent.press])
-        else:
-            self._send_direct(self.definition.direct_commands[ent.press], None)
+        self._press_named(ent.press)
+
+    def set_switch(self, entity_key: str, on: bool) -> None:
+        """Press the switch's button until its field reads ``on`` (no press if it already does)."""
+        if not self.transmit:
+            raise TransmitForbidden("transmit disabled; switch change ignored")
+        self.switches[entity_key].set_target(on)
 
     def set_number(self, entity_key: str, value: float) -> float:
         if not self.transmit:
@@ -137,6 +160,19 @@ class Tub:
         self._send_direct(self.definition.direct_commands[ent.control.command], round(target))
         log.info("%s: queued %s", entity_key, round(target))
         return target
+
+    def _press_named(self, name: str) -> None:
+        if name in self.definition.buttons:
+            self._press_code(self.definition.buttons[name])
+        else:
+            self._send_direct(self.definition.direct_commands[name], None)
+
+    def _press_switch(self, ent: SwitchEntity) -> None:
+        try:
+            self._press_named(ent.press)
+        except TransmitForbidden as exc:  # a `requires` guard: stop, do not raise into the receive path
+            log.warning("%s: %s", ent.key, exc)
+            self.switches[ent.key].cancel()
 
     def _press_code(self, code: int) -> None:
         self.bus.enqueue_press(code)

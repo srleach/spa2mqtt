@@ -228,14 +228,31 @@ Each entity maps a field or a button to a Home Assistant entity.
 |---|---|---|
 | `sensor` | `field` | Optional `device_class`, `unit_of_measurement`, `state_class`, `accuracy_decimals` |
 | `binary_sensor` | `field` | Optional `device_class` |
-| `text_sensor` | `field` | For mapped values such as pump speed |
+| `text_sensor` | `field` | For mapped values such as pump speed. Home Assistant shows it as a sensor with a text value |
 | `button` | `press` | A button name from `commands.buttons`, or a direct command with no `value` |
+| `switch` | `field`, `press` | An on/off state that a toggle button changes. `field` is a bit field. Optional `confirm_frames`, `max_presses`, `progress_field`, `device_class`. Bridge only |
 | `number` | `field`, `control`, `min`, `max`, `step` | `control: {type: stepper, up:, down:}` presses the up and down buttons until the field matches. `control: {type: direct, command:}` sends one direct command with the value |
 
 A `direct` number needs a one-byte field with no `scale`, `offset`, `xor`, `shift` or
 `mask`, whole-number `min`, `max` and `step`, and a range inside the command's `min`..`max`.
 The value sent is then the value shown. A value outside `min`..`max` is refused, not
 clamped: one message becomes one frame, with no stepping.
+
+A `switch` presses its button only while `field` differs from the state that Home Assistant
+asked for. After each press it waits `confirm_frames` status frames (default 10, about
+three seconds on a J235) for the field to follow, then presses again. It stops after
+`max_presses` (default 3) and logs a warning. The wait matters: a second press sent too
+early turns a two-state pump straight back.
+
+Some pumps cycle off, low, high, off, so "off" from low takes two presses and the field
+stays on in between. Name the speed field as `progress_field`. A change there shows that
+the press arrived, and the next press follows without the wait.
+
+With `bus.mode: direct` a switch sends one frame and never retries, so `max_presses` must
+be `1` (the default there).
+
+The ESPHome component has no switch platform yet. The generated package leaves switches
+out.
 
 Every entity has a `key`, a `component` and a `name`. Optional: `icon` (`mdi:...`),
 `entity_category` (`diagnostic` or `config`), `enabled_by_default`, `description`.

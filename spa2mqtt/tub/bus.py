@@ -1,6 +1,8 @@
 """Bus arbitration (docs/protocol.md §4) and the single transmit choke point.
 
 :class:`BusClient` is sans-IO: it consumes received frames and returns frames to send.
+:class:`DirectBusClient` is its sibling for plain boards behind a ProLink module
+(docs/protocol-plain.md §5): a fixed address and no channel claim.
 :class:`BusWriter` is the only code allowed to write to a transport.
 """
 
@@ -23,6 +25,8 @@ T_CHANNEL_RESPONSE = 0x02
 T_CHANNEL_ACK = 0x03
 T_CTS = 0x06
 UNASSIGNED_ADDR = 0xFE
+BOARD_MID = 0xAF
+DIRECT_QUEUE_LIMIT = 8
 REQUEST_TIMEOUT_FRAMES = 200  # ~ a few seconds of bus traffic
 
 
@@ -63,6 +67,9 @@ class BusClient:
         self._replied_to_last_cts = False
         self._request_age = 0
         self.observed_presses: deque[tuple[int, int]] = deque(maxlen=50)  # (channel, code)
+
+    def on_connect(self) -> None:
+        """A new transport connection. Channel claims survive a reconnect: nothing to do."""
 
     # -- commands ------------------------------------------------------------
 
@@ -138,3 +145,83 @@ class BusClient:
     def _dormant(self) -> int | None:
         candidates = sorted(self.polled_channels - self.active_channels - {UNASSIGNED_ADDR, 0xFF})
         return candidates[0] if candidates else None
+
+
+class DirectBusClient:
+    """Fixed-address sender for a plain board reached through a ProLink module.
+
+    The ProLink TCP stream carries no clear-to-send and no channel traffic (2,074 captured
+    frames, all status or lights), and pyjacuzzi drove the tub by writing straight to the
+    socket. So there is nothing to claim: queued frames go out one at a time, spaced
+    ``send_gap_frames`` status frames apart. The optional ``hello`` frame is sent once per
+    connection, just before the first queued command and never at start-up.
+    """
+
+    def __init__(
+        self,
+        config: BusConfig,
+        command_type: int | None,
+        transmit_enabled: bool,
+        status_type: int,
+        hello: Frame | None = None,
+    ) -> None:
+        if config.client_address is None:
+            raise ValueError("direct bus mode needs bus.client_address")
+        self.config = config
+        self.command_type = command_type
+        self.transmit_enabled = transmit_enabled
+        self.status_type = status_type
+        self.hello = hello
+        self.channel: int = config.client_address
+        self.state = BusState.READY if transmit_enabled else BusState.LISTEN
+        self.queue: deque[Frame] = deque()
+        self.replies_seen = 0
+        # The monitor reads these from either client. A ProLink stream has no channel traffic.
+        self.polled_channels: set[int] = set()
+        self.active_channels: set[int] = set()
+        self.commands_seen = 0
+        self._hello_sent = False
+        self._gap = config.send_gap_frames
+
+    def on_connect(self) -> None:
+        """A new connection: drop commands queued for the old one and re-arm the hello."""
+        if self.queue:
+            log.warning("connection restarted; dropping %d queued command(s)", len(self.queue))
+            self.queue.clear()
+        self._hello_sent = False
+        self._gap = self.config.send_gap_frames
+
+    # -- commands ------------------------------------------------------------
+
+    def enqueue_press(self, code: int) -> None:
+        if not self.transmit_enabled or self.command_type is None:
+            raise TransmitForbidden("transmit disabled; command not queued")
+        self.enqueue(Frame(self.channel, self.config.client_mid, self.command_type, bytes([code])))
+
+    def enqueue(self, frame: Frame) -> None:
+        if not self.transmit_enabled:
+            raise TransmitForbidden("transmit disabled; command not queued")
+        if len(self.queue) >= DIRECT_QUEUE_LIMIT:
+            log.warning("command queue full (%d); dropping %s", DIRECT_QUEUE_LIMIT, frame)
+            return
+        self.queue.append(frame)
+
+    # -- receive path ----------------------------------------------------------
+
+    def handle(self, frame: Frame) -> list[Frame]:
+        """Observe one received frame; return at most one frame to transmit (none unless enabled)."""
+        if frame.addr == self.channel and frame.mid != BOARD_MID:
+            self.replies_seen += 1
+            log.info("frame addressed to 0x%02X: %s", self.channel, frame)
+        if not self.transmit_enabled:
+            return []
+        if frame.mid != BOARD_MID or frame.type != self.status_type:
+            return []
+        self._gap += 1
+        if not self.queue or self._gap < self.config.send_gap_frames:
+            return []
+        self._gap = 0
+        if self.hello is not None and not self._hello_sent:
+            self._hello_sent = True
+            return [self.hello]
+        return [self.queue.popleft()]

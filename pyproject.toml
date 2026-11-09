@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "spa2mqtt"
 # The version comes from the newest vX.Y.Z git tag (hatch-vcs). See [tool.hatch.version].
 dynamic = ["version"]
-description = "Bridge Balboa-family (Jacuzzi/Sundance encrypted) hot-tub RS485 buses to MQTT / Home Assistant"
+description = "Bridge Balboa-family (Jacuzzi/Sundance) hot-tub RS485 buses to MQTT / Home Assistant"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

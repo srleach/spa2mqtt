@@ -15,8 +15,8 @@
     "model": {"type": "string", "minLength": 1},
     "description": {"type": "string"},
     "protocol": {
-      "description": "Codec family implemented in code. balboa_encrypted: 0x7E framing, CRC-8 0x07/0x02/0x02, pairwise-fold status, CC button encoding.",
-      "enum": ["balboa_encrypted"]
+      "description": "Codec family implemented in code. balboa_encrypted: 0x7E framing, CRC-8 0x07/0x02/0x02, pairwise-fold status, CC button encoding. jacuzzi_plain: the same framing and CRC with plaintext payloads (0x16 status), bridge only (docs/protocol-plain.md).",
+      "enum": ["balboa_encrypted", "jacuzzi_plain"]
     },
     "temperature_unit": {"enum": ["C", "F"]},
     "bus": {
@@ -26,7 +26,20 @@
         "baud": {"type": "integer", "minimum": 1200},
         "client_mid": {"$ref": "#/$defs/byte"},
         "channel_request_magic": {"type": "array", "items": {"$ref": "#/$defs/byte"}, "minItems": 2, "maxItems": 2},
-        "dormant_channel_threshold": {"type": "integer", "minimum": 1, "maximum": 100}
+        "dormant_channel_threshold": {"type": "integer", "minimum": 1, "maximum": 100},
+        "mode": {"enum": ["claim", "direct"], "description": "claim (default): wait for a clear-to-send on a claimed channel (protocol.md §4). direct: send from the fixed client_address with no channel claim (a ProLink module arbitrates the bus itself)."},
+        "client_address": {"$ref": "#/$defs/byte", "description": "direct only: the ADDR byte of every frame sent."},
+        "hello": {"$ref": "#/$defs/key", "description": "direct only: a commands.direct entry with no value, sent once per connection just before the first queued command."},
+        "send_gap_frames": {"type": "integer", "minimum": 1, "maximum": 50, "description": "direct only: status frames to wait between two sent frames (default 4)."}
+      }
+    },
+    "ha": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Home Assistant device identity used when config.yml does not set ha.device_name / ha.device_identifier. Defaults: the definition's name and id.",
+      "properties": {
+        "device_name": {"type": "string", "minLength": 1},
+        "device_identifier": {"type": "string", "minLength": 1}
       }
     },
     "status": {
@@ -35,7 +48,7 @@
       "required": ["type", "decode", "length"],
       "properties": {
         "type": {"$ref": "#/$defs/byte"},
-        "decode": {"enum": ["fold", "unkey", "decrypt"], "description": "decrypt: remove the per-frame key and the key stream, then read fields as plaintext (protocol.md §3.3). unkey: remove only the per-frame key. fold: the older pairwise reading (§3.2)."},
+        "decode": {"enum": ["fold", "unkey", "decrypt", "plain"], "description": "plain: the payload is plaintext and fields index it directly (jacuzzi_plain only). decrypt: remove the per-frame key and the key stream, then read fields as plaintext (protocol.md §3.3). unkey: remove only the per-frame key. fold: the older pairwise reading (§3.2)."},
         "keystream": {
           "type": "object",
           "additionalProperties": false,
@@ -57,11 +70,64 @@
       "required": ["type", "encode", "buttons"],
       "properties": {
         "type": {"$ref": "#/$defs/byte"},
-        "encode": {"enum": ["cc_xor"]},
+        "encode": {"enum": ["cc_xor", "plain"], "description": "cc_xor: two-byte keyed button code (protocol.md §6). plain: the payload is the one-byte code."},
         "buttons": {
           "type": "object",
           "propertyNames": {"$ref": "#/$defs/key"},
-          "additionalProperties": {"$ref": "#/$defs/byte"}
+          "additionalProperties": {"oneOf": [
+            {"$ref": "#/$defs/byte"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["code", "status"],
+              "properties": {
+                "code": {"$ref": "#/$defs/byte"},
+                "status": {"$ref": "#/$defs/status"},
+                "evidence": {"type": "string"},
+                "description": {"type": "string"}
+              }
+            }
+          ]}
+        },
+        "direct": {
+          "type": "object",
+          "description": "jacuzzi_plain only. Named commands sent as their own frame type: a fixed payload, or a payload with one \"value\" slot filled with an integer in min..max.",
+          "propertyNames": {"$ref": "#/$defs/key"},
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "payload", "status"],
+            "properties": {
+              "type": {"$ref": "#/$defs/byte"},
+              "payload": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"oneOf": [{"$ref": "#/$defs/byte"}, {"const": "value"}]}},
+              "min": {"$ref": "#/$defs/byte"},
+              "max": {"$ref": "#/$defs/byte"},
+              "status": {"$ref": "#/$defs/status"},
+              "requires": {
+                "type": "object",
+                "description": "Status bit fields that must read exactly this value in the last status frame, or the command is refused. With no status frame decoded yet the command is refused too. Not allowed on the bus.hello command.",
+                "minProperties": 1,
+                "propertyNames": {"$ref": "#/$defs/key"},
+                "additionalProperties": {"type": "boolean"}
+              },
+              "evidence": {"type": "string"},
+              "description": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "extra_frames": {
+      "type": "object",
+      "description": "jacuzzi_plain only. Further periodic board frames whose payload fields may index (field key 'frame').",
+      "propertyNames": {"$ref": "#/$defs/key"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "length"],
+        "properties": {
+          "type": {"$ref": "#/$defs/byte"},
+          "length": {"type": "integer", "minimum": 1, "maximum": 64}
         }
       }
     },
@@ -87,6 +153,7 @@
       "required": ["byte", "status"],
       "properties": {
         "byte": {"type": "integer", "minimum": 0, "maximum": 63},
+        "frame": {"$ref": "#/$defs/key", "description": "Which frame's payload the field indexes: 'status' (default) or a name from extra_frames."},
         "length": {"type": "integer", "minimum": 1, "maximum": 4},
         "xor": {"type": "integer", "minimum": 0},
         "bit": {"type": "integer", "minimum": 0, "maximum": 31},
@@ -179,19 +246,30 @@
           "properties": {
             "component": {"const": "number"},
             "field": {"$ref": "#/$defs/key"},
-            "control": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["type", "up", "down"],
-              "properties": {
-                "type": {"const": "stepper"},
-                "up": {"$ref": "#/$defs/key"},
-                "down": {"$ref": "#/$defs/key"},
-                "confirm_frames": {"type": "integer", "minimum": 1, "maximum": 50},
-                "set_mode_field": {"$ref": "#/$defs/key", "description": "Bit field that is true while the panel is in temperature-set mode. When given, the controller knows the first press only enters set mode."},
-                "max_attempts": {"type": "integer", "minimum": 1, "maximum": 500}
+            "control": {"oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "up", "down"],
+                "properties": {
+                  "type": {"const": "stepper"},
+                  "up": {"$ref": "#/$defs/key"},
+                  "down": {"$ref": "#/$defs/key"},
+                  "confirm_frames": {"type": "integer", "minimum": 1, "maximum": 50},
+                  "set_mode_field": {"$ref": "#/$defs/key", "description": "Bit field that is true while the panel is in temperature-set mode. When given, the controller knows the first press only enters set mode."},
+                  "max_attempts": {"type": "integer", "minimum": 1, "maximum": 500}
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "command"],
+                "properties": {
+                  "type": {"const": "direct"},
+                  "command": {"$ref": "#/$defs/key", "description": "A commands.direct entry with a value slot. One frame is sent per change; nothing is retried."}
+                }
               }
-            },
+            ]},
             "min": {"type": "number"},
             "max": {"type": "number"},
             "step": {"type": "number", "exclusiveMinimum": 0},

@@ -35,12 +35,12 @@ variables avoid that problem.
 
     | Variable | Required | Example | Meaning |
     |---|---|---|---|
-    | `SPA_IP` | Yes | `192.168.1.100` | Address of the RS485-to-TCP adapter |
+    | `SPA_IP` | Yes | `192.168.1.100` | Address of the RS485-to-TCP adapter (or the ProLink module) |
     | `MQTT_BROKER` | Yes | `192.168.1.7` | Address of the MQTT broker |
     | `MQTT_USERNAME` | If the broker needs a login | `spa` | Broker user name |
     | `MQTT_PASSWORD` | If the broker needs a login | | Broker password |
-    | `SPA_PORT` | No | `8899` | TCP port of the adapter |
-    | `SPA_DEFINITION` | No | `jacuzzi_j235` | Tub definition |
+    | `SPA_PORT` | No | `8899` | TCP port of the adapter. `4257` for a ProLink module |
+    | `SPA_DEFINITION` | No | `jacuzzi_j235` | Tub definition. `jacuzzi_j345` for a J345 |
     | `SPA_TRANSMIT` | No | `false` | Leave `false` until you have read [Safety](../safety.md) |
     | `LOG_LEVEL` | No | `INFO` | `DEBUG` for more detail |
     | `SPA2MQTT_TAG` | No | `2` | Image tag. See [Releases and versions](../releases.md) |
@@ -48,10 +48,13 @@ variables avoid that problem.
     The stack refuses to deploy if `SPA_IP` or `MQTT_BROKER` is missing. This stops a
     container that would only log connection errors.
 
+    For a Jacuzzi J345 with a ProLink module, the [J345 guide](../tubs/jacuzzi-j345.md)
+    lists the values.
+
 5. Select **Deploy the stack**.
 
-In Home Assistant, open **Settings > Devices & services > MQTT**. A device named
-*Jacuzzi J235* appears within a few seconds. Its buttons and the setpoint show as
+In Home Assistant, open **Settings > Devices & services > MQTT**. A device named after
+the tub definition, for example *Jacuzzi J235*, appears within a few seconds. Its buttons and the setpoint show as
 unavailable while transmit is off. That is expected.
 
 !!! note "Home Assistant OS host addresses"
@@ -117,7 +120,9 @@ because most adapters accept only one TCP client.
 2. Select **Containers > Add container**.
 3. Set **Name** to `spa2mqtt-monitor` and **Image** to `ghcr.io/srleach/spa2mqtt:2`.
 4. Under **Advanced container settings > Command & logging**, set **Command** to
-   `spa2mqtt monitor 192.168.1.100` (your adapter's address). Set **Console** to
+   `spa2mqtt monitor 192.168.1.100` (your adapter's address). Add `-p PORT` and
+   `-d DEFINITION` if yours are not `8899` and `jacuzzi_j235`, for example
+   `spa2mqtt monitor 192.168.1.50 -p 4257 -d jacuzzi_j345`. Set **Console** to
    **Interactive & TTY**.
 5. Under **Restart policy**, select **Never**.
 6. Select **Deploy the container**, then open its **Logs**. A report appears at once and
@@ -140,5 +145,6 @@ to receive-only, set it to `false` and update the stack again.
 
 The `ha:` settings (`unique_id_prefix`, `legacy_topics`, `device_name` and others) and a
 USB serial adapter need a `config.yml`, and Portainer under Home Assistant OS cannot mount
-one. The defaults suit almost every install. If you need to change them, run spa2mqtt with
+one. The defaults suit almost every install: the device name and identifier come from the
+tub definition. If you need to change them, run spa2mqtt with
 [Docker Compose](docker-compose.md) on a host that allows bind mounts.

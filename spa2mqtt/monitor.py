@@ -9,6 +9,7 @@ No MQTT, no Home Assistant, and no transmission. Three independent guards:
     spa2mqtt monitor 192.168.1.100                   # EW11A on port 8899
     spa2mqtt monitor 192.168.1.100 --interval 5 --record session.log
     spa2mqtt monitor --replay tests/fixtures/captures/raw/2026-11-04T220754Z_j235_labelled.log
+    spa2mqtt monitor 192.168.1.50 -p 4257 -d jacuzzi_j345 --record -   # ProLink; capture to stdout
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sys
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -38,6 +40,13 @@ TYPE_NAMES = {
     0x03: "channel ack",
     0x06: "clear to send",
     0x07: "nothing to send",
+    0x16: "status (plain)",
+    0x17: "button (plain)",
+    0x19: "panel request",
+    0x1B: "panel reply",
+    0x20: "set temperature",
+    0x21: "set lights",
+    0x23: "lights (plain)",
     0xC4: "status",
     0xCA: "lights",
     0xCC: "panel/button",
@@ -128,7 +137,7 @@ class Monitor:
                 self.last_status = frame
                 if first:
                     self.report(now)  # show the full picture as soon as the tub is heard
-            elif frame.type == self.definition.command_type:
+            elif frame.type == self.definition.command_type and self.definition.command_encode == "cc_xor":
                 self._on_panel_frame(frame, now)
         if now - self._last_report >= self.interval:
             self.report(now)
@@ -147,7 +156,8 @@ class Monitor:
             )
 
     def _on_changes(self, changed: dict[str, FieldValue]) -> None:
-        if not self.show_changes or self.tub.state.status_frames == 1:
+        # <= 1: also quiet for an extra frame (plain lights) that arrives around the first status
+        if not self.show_changes or self.tub.state.status_frames <= 1:
             return
         now = self.clock()
         parts = [f"{self._labels.get(k, k)}={_fmt(v)}" for k, v in changed.items() if k not in self._quiet]
@@ -176,14 +186,18 @@ class Monitor:
         values = self.tub.state.values
         stats = self.decoder.stats
         bus = self.tub.bus
+        plain = self.definition.status_decode == "plain"
         if self.as_json:
+            decoded = None
+            if self.last_status is not None:
+                decoded = (self.last_status.payload if plain else fold(self.last_status.payload)).hex()
             self.out.write(
                 json.dumps(
                     {
                         "t": round(now, 3),
                         "event": "status",
                         "raw": self.last_status.encode().hex() if self.last_status else None,
-                        "decoded": fold(self.last_status.payload).hex() if self.last_status else None,
+                        "decoded": decoded,
                         "values": values,
                         "rates_per_s": rates,
                         "frames": stats.frames,
@@ -209,7 +223,10 @@ class Monitor:
             w("  no status frames yet (is the bridge passing traffic? only one TCP client may be allowed)\n")
         else:
             w(f"  raw     {self.last_status.encode().hex(' ')}\n")
-            w(f"  folded  {fold(self.last_status.payload).hex(' ')}\n")
+            if plain:
+                w(f"  plain   {self.last_status.payload.hex(' ')}\n")
+            else:
+                w(f"  folded  {fold(self.last_status.payload).hex(' ')}\n")
             width = max(len(self._labels.get(k, k)) for k in self.definition.fields)
             for key, fdef in self.definition.fields.items():
                 label = self._labels.get(key, key)
@@ -253,9 +270,13 @@ class Monitor:
 
 
 def open_record(path: str | None) -> TextIO | None:
+    """``-`` records to stdout, for containers whose only way out is the log view."""
     if not path:
         return None
-    p = Path(path)
-    fh = p.open("a", encoding="ascii")
+    if path == "-":
+        fh: TextIO = sys.stdout
+    else:
+        p = Path(path)
+        fh = p.open("a", encoding="ascii")
     fh.write(f"# spa2mqtt monitor capture, started {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n")
     return fh

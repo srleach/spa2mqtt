@@ -69,6 +69,41 @@ cadence, and the month encoding (explained, but not decodable for months 8–12 
    key stream (protocol.md §3.3). Still open: the key stream at bytes not yet tied to a known field.
 8. The meaning of plaintext bytes 27 (display or alert code) and 28 (secondary value).
 
+## The plain-protocol tub (Jacuzzi J345, November 2026)
+
+The facts are in [`protocol-plain.md`](protocol-plain.md). This section records how they
+were settled.
+
+**Model name.** The first outside definition (May 2025) and discussion 13 call the tub a
+"J335". That wording is srleach's, written before the owner's first reply. The owner wrote
+"J345" twice: "My tub is Jacuzzi J345 that's not encrypted using the original ProLink
+adapter" (discussion 6, 18 May 2025) and "unencrypted J345 (my tub)" (discussion 13,
+10 December 2025). The definition is `jacuzzi_j345`. The legacy name
+`jacuzzi_j335_unencrypted_farenheit` is kept as an alias, because the owner's stack sets it.
+
+**Evidence base.** Five logs from the owner (keys S, D, X1–X3 in `protocol-plain.md` §0).
+S is the important one: a pyjacuzzi session with 26 sent commands and the tub's reaction
+to each. D and X1–X3 are receive-only logs of topside actions. The pre-rewrite definition
+was not used: it read 0xC4 offsets and XOR constants on a board that sends 0x16 plaintext.
+
+| # | Conflict or question | Resolution | Evidence |
+|---|---|---|---|
+| P1 | **Indexing.** PJ and JB index the whole frame; the definition indexes the payload. | PJ `data[n]` is payload byte `n − 5`. Every PJ line cited in the definition was re-read with that offset. | PJ `jacuzzi.py` L857–868 against S L5 |
+| P2 | **Heater.** PJ reads heat state from `p[5]` bits 5–4; they are always 0 on this tub. | The only heater candidate is `p[11]` bit 0, which follows the thermostat in three captures. Status: hypothesis. PJ L965 labels those bits "isUVOn". | D L143; X3 L1299; S L11, L14 |
+| P3 | **How to get a turn to send.** JB waits for a CTS on its channel; PJ just writes. | The ProLink stream has no CTS at all, and PJ's 26 writes all worked. The bridge uses a direct mode with spacing. The owner had reported that JB's project could read but not control. | D, X1–X3 census; S; JB `jacuzziRS485.py` L200–205 |
+| P4 | **Setpoint path.** The J235 steps with temp up/down presses. | Those button codes (0x01, 0x02) were never seen on this tub. The direct set-temperature frame (0x20) was, three times. The definition has no temp buttons. | S L8–L14 |
+| P5 | **Which light record.** PJ's command writes four records; the topside writes one. | Decode record 0, the one both change. Records 1–3 are undecoded. | X2, X3; S L27 |
+
+**Reference drift.** JB's head is now `1840e3c` (7 November 2026); `protocol.md` cites
+`96f3172`. HJ's repository is at `9a1df08` and has withdrawn its plain 0x16 support
+(`DECODING.md` §3.9). PJ is unchanged at `f9d6022`, whose parent is the `39c2834` commit
+that `protocol.md` mentions.
+
+**Open.** The list is `protocol-plain.md` §8. The first three would be settled by the
+owner's first receive-only run and first transmit test: whether the connection check is
+needed, whether the decoded temperatures match the topside, and whether the heater bit is
+the heater.
+
 ## Raw-capture request (sent to the owner)
 
 A receive-only capture using `tools/capture.py`, with labelled topside actions. The result is D7

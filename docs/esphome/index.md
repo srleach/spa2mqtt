@@ -77,7 +77,10 @@ See [Tub definitions](../tub-definitions.md) for the file format.
 - One `spa_bus` hub per device. One ESP32 serves one tub.
 - The component supports the "encrypted" Balboa-family protocol only. Boards with a
   different framing need a new codec. See the [wire protocol](../protocol.md).
-- Only the J235 has a definition today.
+- Only the J235 has an ESPHome definition today. `jacuzzi_j345` (an unencrypted board
+  behind a ProLink module) is for the MQTT bridge only: the component refuses it at compile
+  time with a message that starts `protocol 'jacuzzi_plain' not supported by spa_bus`, and
+  no package is generated for it.
 
 ## Next steps
 

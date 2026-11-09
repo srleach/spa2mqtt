@@ -45,7 +45,7 @@ D7 with D2–D6 as corroboration. `[A:labelled]` prints the D7 timeline used for
 | **SC** | `srleach/SpaControl` @ `ec631d8` | `pybalboa/sundanceRS485.py`: a modified copy of HyperActiveJ's decoder (older than HJ). |
 | **HJ** | `HyperActiveJ/sundance780-jacuzzi-balboa-rs485-tcp` @ `fc38ab5` | Sundance 780 decoder plus `DECODING.md`. GitHub now redirects this repo to `pete-jorgensen/SundanceHotTub2MQTT` (same HEAD). History was rewritten to a single commit. |
 | **PJ** | `dhmsjs/pyjacuzzi` @ `f9d6022` (fork `srleach/pyjacuzzi` @ `65f4891`) | Jacuzzi library with Prolink decompilation notes. Upstream has one protocol commit newer than the fork: `39c2834` (2026-11-03, temperature-scale ordering in the 0x16 parser). Line numbers are for the fork unless marked "up". |
-| **JB** | `jackbrown1993/Jacuzzi-RS485` @ `96f3172` | Plain (0x16) Jacuzzi decoder derived from HJ/PJ. |
+| **JB** | `jackbrown1993/Jacuzzi-RS485` @ `96f3172` | Plain (0x16) Jacuzzi decoder derived from HJ/PJ. The plain-board page cites the later head `1840e3c`. |
 | **IR** | `Iraithium/sundance-rs485-controller` @ `f444c9b` | ESPHome external component for Sundance (encrypted) boards: prior art for on-device work. |
 | **AL** | `al1505/ALs-HA-SundanceMarin` @ `8bb04fb` | Sundance Marin 780 HA integration (CRC note only). |
 | **HA** | Home Assistant entity registry, read 2026-11-04 | Current entity set and `unique_id`s (§10). |
@@ -95,7 +95,7 @@ D7 with D2–D6 as corroboration. `[A:labelled]` prints the D7 timeline used for
 | 0x04 / 0x05 | channel | 0xBF | board ↔ client | Existing-client request / response (body `04 08 00`, meaning unknown) | Hypothesis | SC L716–730. Note SC/HJ/JB build this frame with an off-by-one (`bytearray(9)` then write index 9), so this path has probably never run successfully. |
 | 0x06 | channel | 0xBF | board → client | Clear to send for that channel, ≈ 45 Hz to 0x10 | Confirmed | D7: each CTS is followed by the panel's CC [A:census]; SC L731–748. |
 | 0x07 | channel | 0xBF | client → board | Nothing to send | Hypothesis | SC L23, L642–648 (built, never sent: L743 commented out). |
-| 0x16 / 0x17 / 0x23 | | | | **Unencrypted** Jacuzzi status / button / lights. **Not used by the J235.** | Confirmed (not J235) | No such frames in D1; PJ L1617–1665 and HJ `DECODING.md` L275–303 treat these as plaintext on non-encrypted boards. The legacy S2M and SC route 0x16/0x23 through the XOR decoder, which is wrong (HJ upstream removed it for that reason). |
+| 0x16 / 0x17 / 0x23 | | | | **Unencrypted** Jacuzzi status / button / lights. **Not used by the J235.** Documented for the J345 in [Wire protocol (plain boards)](protocol-plain.md). | Confirmed (not J235) | No such frames in D1; PJ L1617–1665 and HJ `DECODING.md` L275–303 treat these as plaintext on non-encrypted boards. The legacy S2M and SC route 0x16/0x23 through the XOR decoder, which is wrong (HJ upstream removed it for that reason). |
 
 The address and MID semantics follow the Balboa convention: `MID=0xAF` is a board broadcast,
 `0xBF` is client traffic, `ADDR=0xFE` is "unassigned client" and `0xFF` is broadcast

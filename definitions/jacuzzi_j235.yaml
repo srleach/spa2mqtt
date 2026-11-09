@@ -15,6 +15,11 @@ description: J-200 series, 2018 board, encrypted C4 status, read via EW11A or ES
 protocol: balboa_encrypted
 temperature_unit: C
 
+# Home Assistant device identity. The identifier is the device the v1 bridge created; the
+# device name defaults to `name` above. Both feed the legacy discovery topics (design.md §8).
+ha:
+  device_identifier: "185569045"
+
 bus:
   baud: 115200
   client_mid: 0xBF

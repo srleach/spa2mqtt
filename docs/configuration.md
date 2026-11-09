@@ -23,8 +23,8 @@ can only switch transmit off, never on, so it fails safe.
 
 | Variable | `config.yml` key | Default | Meaning |
 |---|---|---|---|
-| `SPA_IP` | `spa.transport.host` | `192.168.1.100` | Address of the RS485-to-TCP adapter |
-| `SPA_PORT` | `spa.transport.port` | `8899` | TCP port of the adapter |
+| `SPA_IP` | `spa.transport.host` | `192.168.1.100` | Address of the RS485-to-TCP adapter, or of the ProLink module |
+| `SPA_PORT` | `spa.transport.port` | `8899` | TCP port of the adapter. `4257` for a ProLink module |
 | `SPA_DEFINITION` | `spa.definition` | `jacuzzi_j235` | Tub definition ID, alias or file path. See [Tub definitions](tub-definitions.md) |
 | `VARIANT_DEFINITION` | `spa.definition` | | v1 name of `SPA_DEFINITION`. `SPA_DEFINITION` wins if both are set |
 | `SPA_TRANSMIT` | `spa.transmit` | `false` | Allow commands to the tub. See [Transmit](#transmit) |
@@ -109,12 +109,18 @@ Assistant feature that creates entities from retained config messages on the bro
 |---|---|---|
 | `ha.discovery_prefix` | `homeassistant` | Discovery prefix that Home Assistant listens on |
 | `ha.base_topic` | `spa2mqtt` | First part of the state and command topics, for example `spa2mqtt/jacuzzi_j235/...` |
-| `ha.device_name` | `Jacuzzi J235` | Device name in Home Assistant. With `legacy_topics`, it is also part of the discovery topics |
-| `ha.device_identifier` | `185569045` | Device identifier. The default is the device that the v1 bridge created, so an upgrade keeps it |
+| `ha.device_name` | From the tub definition | Device name in Home Assistant. With `legacy_topics`, it is also part of the discovery topics. `Jacuzzi J235` for `jacuzzi_j235`, `Jacuzzi J345` for `jacuzzi_j345` |
+| `ha.device_identifier` | From the tub definition | Device identifier. For `jacuzzi_j235` it is `185569045`, the device that the v1 bridge created, so an upgrade keeps it. For `jacuzzi_j345` it is `jacuzzi_j345` |
 | `ha.unique_id_prefix` | empty | Text put in front of every entity `unique_id`. See [unique_id_prefix](#unique_id_prefix) |
 | `ha.legacy_topics` | `true` | Publish discovery to the topics that v1 used. See [Legacy topics](#legacy-topics) |
 | `ha.heartbeat` | `60` | Seconds between re-publishes of unchanged values |
 | `ha.heartbeat_overrides` | none | Per-field heartbeat, as `field: seconds` |
+
+The two device keys default to the tub definition's `ha:` section, or to its `name` and
+`id`. An install that sets only environment variables therefore gets the right device for
+its tub. For the J235 nothing changes. A custom definition file that relied on the old
+fixed defaults (`Jacuzzi J235`, `185569045`) now gets its own name and ID: set both keys
+in `config.yml`, or add an `ha:` section to the definition, to keep the old device.
 
 ### Other keys
 
@@ -139,6 +145,12 @@ With transmit on:
   way a second topside panel does. Then it sends the button press.
 - For a setpoint change, it presses up or down one step at a time and checks the status
   after each press, until the setpoint matches the target.
+
+A tub definition with `bus.mode: direct` (the J345 behind a ProLink module) has no channel
+to claim. On the first command after each connection the bridge sends one connection-check
+frame, and then one frame per command, about 1.2 seconds apart. A setpoint change is one
+frame, not a series of presses, and nothing is retried. See the
+[J345 guide](tubs/jacuzzi-j345.md#enable-transmit).
 
 Read [Safety](safety.md) before you enable transmit.
 

@@ -32,11 +32,17 @@ and the same entity names. See [Switch over from MQTT](esphome/migrate.md).
 
 For both options:
 
-- A supported tub. Today that is the Jacuzzi J235 (`jacuzzi_j235`). Other tubs need a
+- A supported tub. Today that is the Jacuzzi J235 (`jacuzzi_j235`), and, with the MQTT
+  bridge only, the Jacuzzi J345 (`jacuzzi_j345`). Other tubs need a
   [tub definition](tub-definitions.md).
 - Access to the RS485 header on the spa control board. The header is intended for a
   second topside panel. It carries the RS485 A and B lines that the topside panel uses.
 - A way to isolate the spa from mains power while you wire it. See [Safety](safety.md).
+
+!!! note "Jacuzzi J345 with a ProLink module"
+    The J345 needs no wiring and no adapter: the bridge connects to the tub's ProLink
+    module on TCP port 4257. Follow the [J345 guide](tubs/jacuzzi-j345.md) instead of the
+    adapter steps on this page.
 
 For the MQTT bridge:
 

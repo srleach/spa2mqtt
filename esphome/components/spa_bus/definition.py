@@ -56,7 +56,10 @@ def load(name_or_path: str) -> dict[str, Any]:
     except Exception as exc:  # jsonschema.ValidationError
         raise DefinitionError(f"{path}: {exc}") from exc
     if raw["protocol"] != "balboa_encrypted":
-        raise DefinitionError(f"{path}: protocol {raw['protocol']!r} not supported by spa_bus")
+        raise DefinitionError(
+            f"{path}: protocol {raw['protocol']!r} not supported by spa_bus (ESPHome supports "
+            f"balboa_encrypted only; use the spa2mqtt bridge for this tub)"
+        )
     raw["_path"] = str(path)
     return raw
 

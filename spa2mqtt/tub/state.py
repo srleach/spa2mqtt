@@ -19,9 +19,16 @@ class TubState:
 
     def update(self, new: Mapping[str, FieldValue]) -> dict[str, FieldValue]:
         """Apply a decoded status frame; return only the fields whose value changed."""
-        now = self.clock()
         self.status_frames += 1
-        self.last_status_at = now
+        self.last_status_at = self.clock()
+        return self._apply(new)
+
+    def merge(self, new: Mapping[str, FieldValue]) -> dict[str, FieldValue]:
+        """Apply values from a frame that is not the status frame (the counters stay put)."""
+        return self._apply(new)
+
+    def _apply(self, new: Mapping[str, FieldValue]) -> dict[str, FieldValue]:
+        now = self.clock()
         changed: dict[str, FieldValue] = {}
         for key, value in new.items():
             if key not in self.values or self.values[key] != value:

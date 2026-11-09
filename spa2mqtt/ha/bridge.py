@@ -19,7 +19,7 @@ from paho.mqtt.enums import CallbackAPIVersion
 
 from ..definitions.model import ButtonEntity, FieldValue, NumberEntity, StateEntity, TubDefinition
 from ..transport.base import TransmitForbidden
-from ..tub.tub import Tub
+from ..tub.tub import CommandBlocked, Tub
 from .discovery import DiscoveryConfig, EntityTopics, build_discovery, format_state
 
 log = logging.getLogger(__name__)
@@ -158,7 +158,9 @@ class MqttBridge:
             elif isinstance(e.entity, NumberEntity):
                 target = self.tub.set_number(e.entity.key, float(payload))
                 log.info("%s target set to %s", e.entity.key, target)
+        except CommandBlocked as exc:
+            log.warning("ignored %s: %s", e.entity.key, exc)
         except TransmitForbidden as exc:
             log.warning("ignored %s: %s (set spa.transmit: true to enable commands)", e.entity.key, exc)
-        except ValueError:
-            log.warning("ignored %s: bad payload %r", e.entity.key, payload)
+        except ValueError as exc:
+            log.warning("ignored %s: bad payload %r (%s)", e.entity.key, payload, exc)

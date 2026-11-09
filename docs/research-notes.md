@@ -62,8 +62,9 @@ cadence, and the month encoding (explained, but not decodable for months 8–12 
 3. ~~d3 / d12: maintenance counters~~: FC, H2O and UV countdowns at plaintext bytes 6, 24, 27 (D8).
    Still open: the d13 display code space, the filter cycle settings and heat mode.
 4. d14 underlying value (the pump-1 flag is understood).
-5. Channel assignment on J235 (0x00/0x01/0x02/0x03). Can only be tested by transmitting,
-   which is out of scope for development. The code path exists but is disabled by default.
+5. Channel assignment on J235 (0x00/0x01/0x02/0x03). Works: the board granted the bridge 0x11
+   and polls it (D8). Still open: a capture of the request and answer bytes. Transmit stays
+   disabled by default.
 6. EW11A serial settings (expected 115200 8N1).
 7. ~~Whether Model A or Model B reflects the real plaintext layout~~: per byte, with a corrected
    key stream (protocol.md §3.3). Still open: the key stream at bytes not yet tied to a known field.

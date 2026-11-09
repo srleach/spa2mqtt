@@ -6,10 +6,12 @@ RS485-to-TCP adapter such as the Elfin EW11A, or through an ESP32 running the ES
 component. The definition ID is `jacuzzi_j235`. It is the default, so most settings on
 this page are the defaults.
 
-!!! warning "Transmit has not run against the tub"
-    Every sensor was checked against labelled captures from the project's own J235. The
-    transmit path is tested against a simulated control board only. Start receive-only,
-    and have someone at the topside for the first commands.
+!!! note "Tested on the project's own tub"
+    Every sensor was checked against labelled captures from the project's own J235.
+    Transmit runs on that tub through the MQTT bridge and an EW11A (November 2026): the
+    board granted the bridge channel `0x11`, and the buttons, *Temperature Set Control*
+    and the switches act at the topside. Start receive-only on a new install, and watch
+    the topside for the first commands.
 
 ## What is supported
 
@@ -167,10 +169,9 @@ With transmit off, the bridge and the ESP32 never write to the bus.
 
 Read [Safety](../safety.md) first.
 
-!!! danger "First commands on the real tub"
-    The bus handshake that claims a channel has been tested only against a simulated
-    board. It cannot be observed on the J235 without transmitting. Have someone at the
-    topside for the first commands.
+!!! warning "First commands on your tub"
+    The channel claim works on the project's J235 with the MQTT bridge. Your board, adapter
+    or ESP32 wiring may differ. Have someone at the topside for the first commands.
 
 What the bridge or the ESP32 sends:
 
@@ -203,7 +204,7 @@ breaker and wait before you switch it on again.
 
 ## Send captures back
 
-A capture of something new on this tub helps, in particular the first transmit session
+A capture of something new on this tub helps, in particular a session with commands
 and the menu. `spa2mqtt capture` is read-only and keeps only the frames that changed:
 
 ```bash
@@ -230,11 +231,10 @@ accepts one client. See [Monitor and capture](../monitor-and-capture.md) for bot
 
 Open questions that a capture or a test at the tub would answer:
 
-1. Does the board grant a channel to the bridge, as the simulated board does?
-2. Where are the filter cycle settings and the heat mode? A capture while they are
+1. Where are the filter cycle settings and the heat mode? A capture while they are
    changed at the topside would settle it.
-3. What does *Manual Circulation Call* show, if anything?
-4. What are the button codes for ClearRay and the menu on this tub?
+2. What does *Manual Circulation Call* show, if anything?
+3. What are the button codes for ClearRay and the menu on this tub?
 
 The [wire protocol](../protocol.md#9-known-inferred-unknown-summary) lists the unknown
 bytes.

@@ -25,7 +25,7 @@ from spa2mqtt.captures import read_capture
 from spa2mqtt.config import load_config
 from spa2mqtt.definitions import DefinitionError, TubDefinition
 from spa2mqtt.definitions.loader import parse_definition
-from spa2mqtt.definitions.model import ButtonEntity, DirectControl, NumberEntity
+from spa2mqtt.definitions.model import ButtonEntity, DirectControl, NumberEntity, SwitchEntity
 from spa2mqtt.ha.bridge import MqttBridge, MqttSettings
 from spa2mqtt.ha.discovery import build_discovery
 from spa2mqtt.monitor import Monitor
@@ -288,6 +288,13 @@ def emittable(definition: TubDefinition) -> set[bytes]:
         tub.on_frame(STATUS)
         act(tub, action)
         out.update(drain(tub))
+    for e in definition.entities:
+        if isinstance(e, SwitchEntity):  # both targets: one of them differs from the state in STATUS
+            for on in (True, False):
+                tub = Tub(definition, transmit=True)
+                tub.on_frame(STATUS)
+                tub.set_switch(e.key, on)
+                out.update(drain(tub, 60))
     return out
 
 

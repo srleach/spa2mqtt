@@ -27,6 +27,7 @@ from .model import (
     NumberEntity,
     StateEntity,
     StepperControl,
+    SwitchEntity,
     TubDefinition,
 )
 
@@ -284,6 +285,33 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
             elif direct[e["press"]].takes_value:
                 raise DefinitionError(f"{source}: button {key!r} cannot press {e['press']!r}: it needs a value")
             entities.append(ButtonEntity(**common, press=e["press"]))
+        elif comp == "switch":
+            need_field(e["field"])
+            if fields[e["field"]].kind != "bool":
+                raise DefinitionError(f"{source}: switch {key!r} needs a bit field")
+            if e["press"] not in direct:
+                need_button(e["press"])
+            elif direct[e["press"]].takes_value:
+                raise DefinitionError(f"{source}: switch {key!r} cannot press {e['press']!r}: it needs a value")
+            progress = e.get("progress_field")
+            if progress is not None:
+                need_field(progress)
+            # A direct bus sends one frame per command and never retries (design.md §6).
+            direct_bus = raw.get("bus", {}).get("mode") == "direct"
+            max_presses = e.get("max_presses", 1 if direct_bus else 3)
+            if direct_bus and max_presses != 1:
+                raise DefinitionError(f"{source}: switch {key!r} max_presses must be 1 with bus.mode direct")
+            entities.append(
+                SwitchEntity(
+                    **common,
+                    field=e["field"],
+                    press=e["press"],
+                    confirm_frames=e.get("confirm_frames", 10),
+                    max_presses=max_presses,
+                    progress_field=progress,
+                    device_class=e.get("device_class"),
+                )
+            )
         elif comp == "number":
             need_field(e["field"])
             ctl = e["control"]
@@ -323,7 +351,7 @@ def parse_definition(raw: Any, source: str = "<memory>") -> TubDefinition:
         else:  # pragma: no cover - schema prevents this
             raise DefinitionError(f"{source}: unsupported component {comp!r}")
 
-    if any(isinstance(e, (ButtonEntity, NumberEntity)) for e in entities) and not commands:
+    if any(isinstance(e, (ButtonEntity, NumberEntity, SwitchEntity)) for e in entities) and not commands:
         raise DefinitionError(f"{source}: control entities need a 'commands' section")
 
     bus_raw = raw.get("bus", {})

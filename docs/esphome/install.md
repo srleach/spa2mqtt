@@ -134,6 +134,9 @@ text_sensor:
 | `button` | `temperature_increment`, `temperature_decrement`, `pump_1_button`, `pump_2_button`, `light_button` |
 | `number` | `temperature_set_control` |
 
+The *Pump 1* and *Pump 2* switches of the MQTT bridge are not available here: the component
+has no switch platform yet. Use the pump buttons.
+
 Keep the `name` values from the package if you want the same entity IDs as the MQTT bridge.
 
 ## 5. Add the UART and the hub

@@ -1,15 +1,17 @@
 # Monitor and capture
 
-Two tools let you look at the bus without any risk to the tub. Neither one can transmit.
+Three tools let you look at the bus without any risk to the tub. None of them can transmit.
 
 - **`spa2mqtt monitor`** decodes the live bus and prints the values to your terminal. Use
   it to check wiring, check a tub definition, and watch what changes when you press a
   topside button.
+- **`spa2mqtt capture`** prints the bus messages themselves, one per line, and leaves out
+  the repeats. Use it to see what the tub sends, or to share a short log.
 - **`tools/capture.py`** records the raw bytes of the bus to a file, with labels that you
   type. Use it to collect evidence for a new tub definition or a bug report.
 
-Both need a connection to the bus. Most RS485-to-TCP adapters, the EW11A included, accept
-only one TCP client. Stop the bridge before you run either tool.
+All three need a connection to the bus. Most RS485-to-TCP adapters, the EW11A included,
+accept only one TCP client. Stop the bridge before you run any of them.
 
 ## spa2mqtt monitor
 
@@ -84,6 +86,69 @@ happens. Press Ctrl-C to stop. The monitor prints a last report when it stops.
 A rising checksum error count means the bytes are damaged on the way. Check the baud rate
 (115200, 8N1) and the A and B wires.
 
+## spa2mqtt capture
+
+`capture` prints each message (frame) on the bus as one line. A bus repeats itself many
+times a second, so `capture` prints a frame only when it differs from the last frame of
+the same kind. Two frames are the same kind when they have the same address and the same
+message type.
+
+```bash
+spa2mqtt capture HOST [options]
+spa2mqtt capture --serial DEVICE [options]
+spa2mqtt capture --replay FILE [options]
+```
+
+With Docker:
+
+```bash
+docker run --rm -it ghcr.io/srleach/spa2mqtt:2 spa2mqtt capture 192.168.1.100
+```
+
+Like the monitor, it reads through a wrapper that refuses every write, and it has no
+writer. Stop it with Ctrl-C.
+
+### Options
+
+| Option | Default | Meaning |
+|---|---|---|
+| `HOST` | | Address of the RS485-to-TCP adapter |
+| `-p`, `--port` | `8899` | TCP port of the adapter. Use `4257` for a ProLink module |
+| `-d`, `--definition` | `jacuzzi_j235` | Tub definition. It tells `capture` which frames carry a key (see below) |
+| `-o`, `--output FILE` | | Append the lines to `FILE` and print nothing |
+| `--all` | off | Print every frame, repeats too |
+| `--serial DEVICE` | | Read a USB RS485 adapter instead of TCP. Needs the `serial` extra |
+| `--replay FILE` | | Read a capture file instead of the live bus. Use it to shorten a capture you already have |
+| `--speed N` | `0` | Replay speed. `0` is as fast as possible, `1` is real time |
+
+### What it prints
+
+```text
+# spa2mqtt capture: Jacuzzi J235 from 192.168.1.100:8899, started 2026-11-09T20:41:59+0000. Read-only. Repeated frames are left out.
+1793830074.160 RX 7e0510bf065c7e  # 0x10 clear to send
+1793830074.160 RX 7e0710bfcc59b9177e  # 0x10 panel/button
+1793830074.160 RX 7e26ffafc40b190f…497e  # 0xFF status
+1793830166.368 RX 7e0710bfcc7f9b617e  # 0x10 panel/button, after 4127 repeats
+# 51242 frames: 434 shown, 50808 repeats left out, 0 crc errors, 0 resyncs
+```
+
+Each line has the time, the frame as hex, and a note after `#`. The note gives the
+address, the message type, and how many repeats of that kind were left out since the
+line before it. The last line counts the frames when you stop.
+
+The J235 sends every status, lights and panel frame with a new random key, so the bytes
+differ even when nothing changed. `capture` removes the key before it compares those
+frames. A frame is printed only when its content changed. The line still shows the bytes
+exactly as they were received.
+
+In the nine-minute J235 fixture, 51 242 frames become 434 lines.
+
+The output is in the capture [file format](#file-format). The notes are comments, so the
+file plays back with `spa2mqtt replay` and `spa2mqtt monitor --replay`, and it decodes to
+the same state changes as the full capture. It does not keep the timing between repeated
+frames. For a new tub definition or a timing question, record everything with
+`tools/capture.py` or `spa2mqtt monitor --record`.
+
 ## tools/capture.py
 
 `capture.py` records raw bus traffic from an RS485-to-TCP adapter. It has no send call
@@ -110,8 +175,9 @@ Each line is one record:
 <unix time> MARK <label>
 ```
 
-`spa2mqtt monitor --record FILE` writes the same format. Captures in this format play
-back with `spa2mqtt replay FILE` and with `spa2mqtt monitor --replay FILE`.
+Text after `#` is a comment. `spa2mqtt monitor --record FILE` and `spa2mqtt capture` write
+the same format. Captures in this format play back with `spa2mqtt replay FILE` and with
+`spa2mqtt monitor --replay FILE`.
 
 ### A good capture
 

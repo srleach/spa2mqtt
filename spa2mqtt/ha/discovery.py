@@ -13,7 +13,11 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from ..definitions.model import ButtonEntity, EntityDef, NumberEntity, StateEntity, TubDefinition
+from ..definitions.model import ButtonEntity, EntityDef, NumberEntity, StateEntity, SwitchEntity, TubDefinition
+
+# Definition components that Home Assistant's MQTT discovery knows under another name.
+# `text_sensor` is ESPHome's word: in Home Assistant a text value is a plain `sensor`.
+HA_COMPONENT = {"text_sensor": "sensor"}
 
 
 def legacy_clean(raw: str) -> str:
@@ -59,9 +63,10 @@ class EntityTopics:
 
 
 def _config_topic(cfg: DiscoveryConfig, e: EntityDef) -> str:
+    component = HA_COMPONENT.get(e.component, e.component)
     if cfg.legacy_topics:
-        return f"{cfg.discovery_prefix}/{e.component}/{legacy_clean(cfg.device_name)}/{legacy_clean(e.name)}/config"
-    return f"{cfg.discovery_prefix}/{e.component}/{cfg.node}/{e.key}/config"
+        return f"{cfg.discovery_prefix}/{component}/{legacy_clean(cfg.device_name)}/{legacy_clean(e.name)}/config"
+    return f"{cfg.discovery_prefix}/{component}/{cfg.node}/{e.key}/config"
 
 
 def device_payload(definition: TubDefinition, cfg: DiscoveryConfig) -> dict[str, Any]:
@@ -125,6 +130,15 @@ def build_discovery(definition: TubDefinition, cfg: DiscoveryConfig) -> list[Ent
                 value = getattr(e, attr)
                 if value:
                     payload[attr] = value
+            payload["availability"].append({"topic": cfg.control_availability_topic})
+        elif isinstance(e, SwitchEntity):
+            state_topic = f"{base}/state"
+            command_topic = f"{base}/set"
+            payload.update(
+                {"state_topic": state_topic, "command_topic": command_topic, "payload_on": "ON", "payload_off": "OFF"}
+            )
+            if e.device_class:
+                payload["device_class"] = e.device_class
             payload["availability"].append({"topic": cfg.control_availability_topic})
         out.append(EntityTopics(e, _config_topic(cfg, e), state_topic, command_topic, payload))
     return out

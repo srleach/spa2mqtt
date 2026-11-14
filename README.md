@@ -89,6 +89,10 @@ To add a tub, see [Tub definitions](https://seanrleach.co.uk/spa2mqtt/tub-defini
 [Monitor and capture](https://seanrleach.co.uk/spa2mqtt/monitor-and-capture/). Captures are
 welcome as issues or pull requests.
 
+## Related projects
+
+- [GalKar83/sundance-rs485-controller](https://github.com/GalKar83/sundance-rs485-controller) (branch `sundance-680`): ESPHome component and Home Assistant setup for the Sundance 680 series. The sticker on its board reads "PWA J100/J200/SD680", which suggests the same board family as the J235 (a J-200 collection model, per parts listings). Listed for cross-reference only. Licence: PolyForm Noncommercial 1.0.0.
+
 ## Development
 
 ```bash
